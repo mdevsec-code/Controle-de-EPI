@@ -1,0 +1,6 @@
+{
+  "name": "@epi-manager/types",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Contratos/DTOs compartilhados entre api e web"
+}

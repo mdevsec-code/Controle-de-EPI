@@ -1,0 +1,6 @@
+{
+  "name": "@epi-manager/config",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Configuracoes compartilhadas: eslint, tsconfig, tailwind"
+}

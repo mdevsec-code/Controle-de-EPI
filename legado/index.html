@@ -1,0 +1,1205 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>EngeNova · Controle de Entrega de EPIs</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@500;600;700;800&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --orange-1:#FF8A3D;
+  --orange-2:#EE5A24;
+  --orange-3:#D8481A;
+  --ink:#1B1B1F;
+  --ink-soft:#4A4A52;
+  --muted:#8E8E96;
+  --line:#ECECEE;
+  --bg:#F4F4F6;
+  --card:#FFFFFF;
+  --success:#1E8F5E;
+  --danger:#E24C4C;
+  --radius-lg:22px;
+  --radius-md:16px;
+  --radius-sm:10px;
+  --shadow-card:0 2px 10px rgba(20,20,30,.05), 0 1px 2px rgba(20,20,30,.04);
+  --shadow-pop:0 18px 40px rgba(20,20,30,.16);
+}
+*{box-sizing:border-box;}
+html,body{height:100%;}
+body{
+  margin:0;
+  font-family:'Inter',system-ui,sans-serif;
+  background:#E7E7EA;
+  color:var(--ink);
+  -webkit-font-smoothing:antialiased;
+  display:flex;
+  align-items:flex-start;
+  justify-content:center;
+  min-height:100vh;
+}
+h1,h2,h3,.display{font-family:'Sora',sans-serif;}
+.mono{font-family:'JetBrains Mono',monospace;}
+
+/* ===== App shell ===== */
+.app-wrap{
+  width:100%;
+  max-width:430px;
+  min-height:100vh;
+  background:var(--bg);
+  position:relative;
+  overflow:hidden;
+  display:flex;
+  flex-direction:column;
+  box-shadow:var(--shadow-pop);
+}
+@media (min-width:560px){
+  body{padding:32px 0;}
+  .app-wrap{min-height:844px; height:844px; border-radius:36px; border:8px solid var(--ink);}
+}
+
+.screen{
+  position:absolute;
+  inset:0;
+  display:flex;
+  flex-direction:column;
+  background:var(--bg);
+  transform:translateX(100%);
+  transition:transform .32s cubic-bezier(.32,.72,0,1);
+  opacity:0;
+  pointer-events:none;
+}
+.screen.active{
+  transform:translateX(0);
+  opacity:1;
+  pointer-events:auto;
+  z-index:2;
+}
+.screen.base{ z-index:1; }
+
+.scroll{
+  flex:1;
+  overflow-y:auto;
+  -webkit-overflow-scrolling:touch;
+  padding-bottom:100px;
+}
+.scroll::-webkit-scrollbar{width:0;}
+
+/* ===== Status bar mock ===== */
+.statusbar{
+  height:24px;
+  flex-shrink:0;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  padding:6px 22px 0;
+  font-size:13px;
+  font-weight:600;
+  color:inherit;
+}
+
+/* ===== Top bars ===== */
+.topbar{
+  display:flex;
+  align-items:center;
+  gap:14px;
+  padding:6px 18px 14px;
+  flex-shrink:0;
+}
+.topbar h1{ font-size:16px; font-weight:700; margin:0; flex:1; text-align:center; margin-right:34px;}
+.iconbtn{
+  width:34px;height:34px;border-radius:50%;
+  border:none; background:rgba(0,0,0,.05);
+  display:flex;align-items:center;justify-content:center;
+  cursor:pointer; flex-shrink:0; color:var(--ink);
+}
+.iconbtn svg{width:18px;height:18px;}
+.iconbtn.on-dark{background:rgba(255,255,255,.16); color:#fff;}
+
+/* ===== Buttons ===== */
+.btn{
+  display:flex; align-items:center; justify-content:center; gap:8px;
+  width:100%; padding:16px 20px; border:none; border-radius:16px;
+  font-family:'Sora',sans-serif; font-weight:700; font-size:15.5px;
+  cursor:pointer; letter-spacing:.2px;
+  transition:transform .15s ease, box-shadow .15s ease, opacity .15s ease;
+}
+.btn:active{ transform:scale(.98); }
+.btn-primary{
+  background:linear-gradient(135deg,var(--orange-1),var(--orange-2));
+  color:#fff;
+  box-shadow:0 10px 20px -8px rgba(238,90,36,.55);
+}
+.btn-primary:disabled{ opacity:.4; box-shadow:none; cursor:not-allowed; }
+.btn-outline{
+  background:#fff; color:var(--ink); border:1.5px solid var(--line);
+}
+.btn-ghost{
+  background:transparent; color:var(--ink-soft); font-weight:600;
+}
+.btn-danger-text{ color:var(--orange-2); background:transparent; font-weight:700;}
+
+.footer-cta{
+  position:absolute; left:0; right:0; bottom:0;
+  padding:14px 20px calc(20px + env(safe-area-inset-bottom));
+  background:linear-gradient(to top, var(--bg) 60%, transparent);
+  display:flex; flex-direction:column; gap:10px; z-index:3;
+}
+
+/* ===== Inputs ===== */
+.field{
+  position:relative; margin-bottom:14px;
+}
+.field input, .field textarea{
+  width:100%; border:1.5px solid var(--line); background:#fff;
+  border-radius:14px; padding:15px 16px 15px 44px; font-size:14.5px;
+  font-family:'Inter',sans-serif; color:var(--ink); outline:none;
+  transition:border-color .15s;
+}
+.field textarea{padding-left:16px; resize:none; min-height:90px;}
+.field input:focus, .field textarea:focus{ border-color:var(--orange-2); }
+.field .fico{
+  position:absolute; left:15px; top:50%; transform:translateY(-50%);
+  width:18px; height:18px; color:var(--muted); pointer-events:none;
+}
+.field .toggle-eye{
+  position:absolute; right:14px; top:50%; transform:translateY(-50%);
+  width:18px;height:18px; color:var(--muted); cursor:pointer; background:none; border:none; padding:0;
+}
+.charcount{ text-align:right; font-size:11.5px; color:var(--muted); margin-top:-8px; margin-bottom:14px;}
+
+/* ===== Login ===== */
+.login-screen{ background:var(--bg); }
+.login-hero{
+  padding:56px 32px 0; text-align:center;
+}
+.login-hero .logo{
+  width:74px;height:74px;border-radius:20px;
+  background:linear-gradient(135deg,var(--orange-1),var(--orange-3));
+  display:flex;align-items:center;justify-content:center;margin:0 auto 18px;
+  box-shadow:0 14px 26px -10px rgba(238,90,36,.5);
+}
+.login-hero .logo svg{width:38px;height:38px;color:#fff;}
+.login-hero .brand{ font-size:21px; font-weight:800; letter-spacing:.5px;}
+.login-hero .brand span{color:var(--orange-2);}
+.login-hero .brand-sub{ font-size:10px; letter-spacing:3px; color:var(--muted); font-weight:600; margin-top:2px;}
+.login-title{ font-size:22px; font-weight:800; margin:34px 0 4px;}
+.login-title em{ color:var(--orange-2); font-style:normal;}
+.login-sub{ font-size:13.5px; color:var(--muted); margin-bottom:26px;}
+.login-form{ padding:0 28px;}
+.login-remember{ display:flex; align-items:center; justify-content:space-between; font-size:13px; color:var(--ink-soft); margin:2px 0 24px;}
+.login-remember label{ display:flex; align-items:center; gap:8px; cursor:pointer;}
+.login-remember a{ color:var(--orange-2); font-weight:600; text-decoration:none;}
+.login-skyline{
+  margin-top:auto; height:110px;
+  background: linear-gradient(to top, rgba(238,90,36,.08), transparent 70%);
+  position:relative; overflow:hidden;
+}
+.login-skyline svg{position:absolute; bottom:0; left:0; width:100%; opacity:.5;}
+.login-version{ text-align:center; font-size:11px; color:var(--muted); padding-bottom:18px;}
+
+/* ===== Home ===== */
+.home-header{
+  background:linear-gradient(135deg,var(--orange-1),var(--orange-2) 60%, var(--orange-3));
+  padding:6px 20px 26px;
+  border-radius:0 0 28px 28px;
+  color:#fff;
+  flex-shrink:0;
+  position:relative;
+  overflow:hidden;
+}
+.home-header::after{
+  content:"";
+  position:absolute; right:-40px; top:-40px; width:160px; height:160px;
+  border-radius:50%; background:rgba(255,255,255,.08);
+}
+.home-header::before{
+  content:"";
+  position:absolute; right:30px; bottom:-60px; width:100px; height:100px;
+  border-radius:50%; background:rgba(255,255,255,.08);
+}
+.home-topline{ display:flex; align-items:center; justify-content:space-between; margin:8px 0 18px;}
+.home-hello{ font-size:19px; font-weight:700; display:flex; align-items:center; gap:6px;}
+.home-wh{ display:flex; align-items:center; gap:5px; font-size:12.5px; opacity:.92; margin-top:3px; font-weight:500;}
+.home-wh svg{width:13px;height:13px;}
+.bell-dot{ position:absolute; top:6px; right:6px; width:7px;height:7px; background:#fff; border-radius:50%; box-shadow:0 0 0 2px var(--orange-2);}
+
+.action-grid{ display:grid; grid-template-columns:1fr 1fr; gap:12px; position:relative; z-index:1;}
+.action-card{
+  background:rgba(255,255,255,.14); backdrop-filter:blur(6px);
+  border:1px solid rgba(255,255,255,.35);
+  border-radius:18px; padding:18px 14px; text-align:center; cursor:pointer;
+  color:#fff; transition:transform .15s;
+}
+.action-card:active{ transform:scale(.96); }
+.action-card .aicon{
+  width:44px;height:44px;border-radius:14px; background:rgba(255,255,255,.22);
+  display:flex; align-items:center; justify-content:center; margin:0 auto 10px;
+}
+.action-card .aicon svg{width:22px;height:22px;}
+.action-card span{ font-size:13.5px; font-weight:700; display:block; line-height:1.25;}
+
+.section-pad{ padding:18px 20px 0;}
+.summary-card{
+  background:var(--card); border-radius:20px; padding:18px 16px;
+  box-shadow:var(--shadow-card); display:flex; margin-top:-8px; position:relative; z-index:2;
+}
+.summary-item{ flex:1; text-align:center; }
+.summary-item + .summary-item{ border-left:1px solid var(--line); }
+.summary-num{ font-size:22px; font-weight:800; font-family:'Sora',sans-serif;}
+.summary-num.orange{ color:var(--orange-2); }
+.summary-label{ font-size:11px; color:var(--muted); margin-top:2px;}
+.section-title{ font-size:14.5px; font-weight:700; }
+.section-head{ display:flex; align-items:center; justify-content:space-between; margin:22px 0 10px;}
+.link-see{ font-size:12.5px; color:var(--orange-2); font-weight:700; text-decoration:none; cursor:pointer;}
+
+.delivery-row{
+  display:flex; align-items:center; gap:12px; background:var(--card);
+  border-radius:16px; padding:12px 14px; margin-bottom:10px; box-shadow:var(--shadow-card);
+  cursor:pointer;
+}
+.avatar{
+  width:42px;height:42px;border-radius:50%; flex-shrink:0;
+  background:linear-gradient(135deg,#FFD8B8,#FFB27A);
+  display:flex; align-items:center; justify-content:center;
+  font-weight:700; color:var(--orange-3); font-size:14px; font-family:'Sora',sans-serif;
+}
+.d-name{ font-size:13.5px; font-weight:700;}
+.d-sub{ font-size:12px; color:var(--muted); margin-top:1px;}
+.d-time{ font-size:11.5px; color:var(--muted); font-weight:600; margin-left:auto; text-align:right;}
+.d-qty{ font-size:12px; color:var(--ink-soft); font-weight:600;}
+.chev{ width:16px;height:16px; color:var(--muted); flex-shrink:0;}
+
+/* ===== Bottom Nav ===== */
+.bottomnav{
+  position:absolute; left:0; right:0; bottom:0; z-index:5;
+  background:#fff; border-top:1px solid var(--line);
+  display:flex; padding:8px 6px calc(8px + env(safe-area-inset-bottom));
+}
+.navitem{
+  flex:1; display:flex; flex-direction:column; align-items:center; gap:3px;
+  color:var(--muted); font-size:10.5px; font-weight:600; cursor:pointer;
+  padding:6px 2px; border-radius:12px; background:none; border:none;
+}
+.navitem svg{width:20px;height:20px;}
+.navitem.active{ color:var(--orange-2); }
+.navitem.active .navicon{ background:#FFF0E6; border-radius:10px; }
+.navicon{ width:32px; height:22px; display:flex; align-items:center; justify-content:center; }
+
+/* ===== Generic detail screens ===== */
+.detail-card{
+  background:var(--card); border-radius:20px; padding:18px 16px; box-shadow:var(--shadow-card); margin:0 20px;
+}
+.detail-row{ display:flex; align-items:center; justify-content:space-between; padding:11px 2px; font-size:13.5px; border-bottom:1px solid var(--line);}
+.detail-row:last-child{ border-bottom:none;}
+.detail-label{ color:var(--muted); }
+.detail-value{ font-weight:700; text-align:right;}
+
+/* ===== Employee found ===== */
+.emp-hero{ text-align:center; padding:26px 24px 0;}
+.emp-photo{
+  width:112px;height:112px;border-radius:50%; margin:0 auto 14px; object-fit:cover;
+  border:4px solid #fff; box-shadow:var(--shadow-card);
+}
+.emp-name{ font-size:19px; font-weight:800;}
+.badge{
+  display:inline-flex; align-items:center; gap:5px; margin-top:8px;
+  background:#E8F7EF; color:var(--success); font-size:12px; font-weight:700;
+  padding:5px 14px; border-radius:999px;
+}
+.badge .dot{ width:6px;height:6px;border-radius:50%; background:var(--success);}
+
+/* ===== Search list ===== */
+.search-bar{
+  display:flex; align-items:center; gap:10px; background:#fff; border:1.5px solid var(--line);
+  border-radius:14px; padding:12px 16px; margin:0 20px 16px;
+}
+.search-bar svg{ width:17px;height:17px; color:var(--muted); flex-shrink:0;}
+.search-bar input{ border:none; outline:none; flex:1; font-size:14px; font-family:'Inter',sans-serif; background:transparent;}
+.chips{ display:flex; gap:8px; padding:0 20px 16px; overflow-x:auto;}
+.chip{
+  padding:8px 16px; border-radius:999px; font-size:12.5px; font-weight:700; white-space:nowrap;
+  background:#fff; border:1.5px solid var(--line); color:var(--ink-soft); cursor:pointer; flex-shrink:0;
+}
+.chip.active{ background:var(--orange-2); border-color:var(--orange-2); color:#fff;}
+
+.emp-list-item{
+  display:flex; align-items:center; gap:12px; background:#fff; border-radius:16px;
+  padding:12px 14px; margin:0 20px 10px; box-shadow:var(--shadow-card); cursor:pointer;
+}
+.emp-list-item .d-sub{ font-size:11.5px;}
+
+/* ===== EPI select list ===== */
+.epi-item{
+  display:flex; align-items:center; gap:13px; background:#fff; border-radius:16px;
+  padding:14px 16px; margin:0 20px 10px; box-shadow:var(--shadow-card); cursor:pointer;
+  border:1.5px solid transparent;
+}
+.epi-item.checked{ border-color:var(--orange-2); background:#FFF7F2;}
+.checkbox{
+  width:22px;height:22px;border-radius:7px; border:2px solid var(--line); flex-shrink:0;
+  display:flex; align-items:center; justify-content:center; transition:all .15s;
+}
+.checkbox.on{ background:var(--orange-2); border-color:var(--orange-2);}
+.checkbox svg{ width:13px;height:13px; color:#fff; opacity:0; transition:opacity .1s;}
+.checkbox.on svg{ opacity:1;}
+.epi-icon{
+  width:38px;height:38px;border-radius:11px; background:#F2F2F5; flex-shrink:0;
+  display:flex; align-items:center; justify-content:center; color:var(--orange-2);
+}
+.epi-icon svg{width:19px;height:19px;}
+.epi-name{ font-size:14px; font-weight:700; flex:1;}
+
+/* ===== Quantity ===== */
+.qty-card{
+  background:#fff; border-radius:20px; padding:20px; margin:6px 20px 20px; box-shadow:var(--shadow-card);
+  display:flex; align-items:center; gap:14px;
+}
+.qty-card .epi-icon{ width:56px;height:56px; border-radius:16px;}
+.qty-card .epi-icon svg{width:28px;height:28px;}
+.qty-name{ font-weight:800; font-size:15.5px;}
+.qty-ca{ font-size:12.5px; color:var(--muted); margin-top:2px; font-family:'JetBrains Mono',monospace;}
+.stepper{
+  display:flex; align-items:center; justify-content:space-between; background:#fff;
+  border:1.5px solid var(--line); border-radius:16px; padding:6px; margin:0 20px 6px;
+}
+.step-btn{
+  width:52px;height:52px;border-radius:12px; border:none; background:#F2F2F5;
+  display:flex; align-items:center; justify-content:center; cursor:pointer; color:var(--ink); font-size:20px;
+}
+.step-btn:active{ background:#e9e9ec;}
+.step-val{ font-size:26px; font-weight:800; font-family:'Sora',sans-serif; flex:1; text-align:center;}
+.field-label{ font-size:12.5px; font-weight:700; color:var(--ink-soft); margin:18px 20px 8px; display:block;}
+
+/* ===== Radio list (motivo) ===== */
+.radio-item{
+  display:flex; align-items:center; gap:13px; background:#fff; border-radius:16px;
+  padding:15px 16px; margin:0 20px 10px; box-shadow:var(--shadow-card); cursor:pointer;
+  border:1.5px solid transparent;
+}
+.radio-item.checked{ border-color:var(--orange-2); background:#FFF7F2;}
+.radio{
+  width:22px;height:22px;border-radius:50%; border:2px solid var(--line); flex-shrink:0; position:relative;
+}
+.radio.on{ border-color:var(--orange-2);}
+.radio.on::after{
+  content:""; position:absolute; inset:4px; border-radius:50%; background:var(--orange-2);
+}
+
+/* ===== Signature ===== */
+.sig-title{ text-align:center; font-size:17px; font-weight:800; margin:8px 0 2px;}
+.sig-sub{ text-align:center; font-size:13px; color:var(--muted); margin-bottom:18px;}
+.sig-pad-wrap{
+  margin:0 20px; background:#fff; border:1.5px solid var(--line); border-radius:18px;
+  box-shadow:var(--shadow-card); overflow:hidden; position:relative; height:260px;
+}
+.sig-pad-wrap canvas{ width:100%; height:100%; touch-action:none; cursor:crosshair;}
+.sig-placeholder{
+  position:absolute; inset:0; display:flex; align-items:center; justify-content:center;
+  color:#D4D4D8; font-size:13px; font-weight:600; pointer-events:none;
+}
+.sig-clear{ display:flex; align-items:center; justify-content:center; gap:7px; margin:16px 0; color:var(--ink-soft); font-weight:700; font-size:13px; cursor:pointer; background:none; border:none; width:100%;}
+.sig-clear svg{width:15px;height:15px;}
+
+/* ===== Success ===== */
+.success-top{
+  background:var(--ink); color:#fff; padding:48px 24px 34px; text-align:center; position:relative; overflow:hidden;
+  flex-shrink:0; border-radius:0 0 30px 30px;
+}
+.confetti{ position:absolute; inset:0; }
+.confetti i{ position:absolute; display:block; border-radius:2px;}
+.check-circle{
+  width:66px;height:66px;border-radius:50%; background:#fff; margin:0 auto 18px;
+  display:flex; align-items:center; justify-content:center; position:relative; z-index:1;
+  animation:pop .5s cubic-bezier(.34,1.56,.64,1);
+}
+@keyframes pop{ 0%{transform:scale(0);} 70%{transform:scale(1.12);} 100%{transform:scale(1);} }
+.check-circle svg{ width:32px;height:32px; color:var(--orange-2);}
+.success-title{ font-size:19px; font-weight:700; position:relative; z-index:1;}
+.success-title b{ display:block; font-size:22px; color:var(--orange-1); font-family:'Sora',sans-serif; margin-top:2px;}
+.success-sub{ font-size:12.5px; opacity:.7; margin-top:8px; position:relative; z-index:1;}
+
+/* ===== Menu drawer ===== */
+.overlay{
+  position:absolute; inset:0; background:rgba(10,10,14,.45); z-index:9; opacity:0; pointer-events:none; transition:opacity .25s;
+}
+.overlay.show{ opacity:1; pointer-events:auto;}
+.drawer{
+  position:absolute; top:0; right:0; bottom:0; width:80%; max-width:320px; background:#fff; z-index:10;
+  transform:translateX(100%); transition:transform .3s cubic-bezier(.32,.72,0,1);
+  display:flex; flex-direction:column; box-shadow:-10px 0 30px rgba(0,0,0,.15);
+}
+.drawer.show{ transform:translateX(0);}
+.drawer-brand{ display:flex; align-items:center; gap:10px; padding:28px 22px 18px; border-bottom:1px solid var(--line);}
+.drawer-brand .logo{ width:40px;height:40px;border-radius:11px; background:linear-gradient(135deg,var(--orange-1),var(--orange-3)); display:flex;align-items:center;justify-content:center;}
+.drawer-brand .logo svg{width:20px;height:20px;color:#fff;}
+.drawer-brand b{ font-size:15px; font-weight:800; display:block;}
+.drawer-brand small{ font-size:9.5px; color:var(--muted); letter-spacing:2px; font-weight:700;}
+.drawer-list{ flex:1; overflow-y:auto; padding:10px 12px;}
+.drawer-item{
+  display:flex; align-items:center; gap:14px; padding:13px 12px; border-radius:12px; cursor:pointer;
+  font-size:14px; font-weight:600; color:var(--ink);
+}
+.drawer-item:hover{ background:#F7F7F8;}
+.drawer-item svg{ width:19px;height:19px; color:var(--ink-soft); flex-shrink:0;}
+.drawer-item.exit{ color:var(--orange-2); margin-top:6px;}
+.drawer-item.exit svg{ color:var(--orange-2);}
+.drawer-foot{ text-align:center; font-size:11px; color:var(--muted); padding:14px; border-top:1px solid var(--line);}
+
+/* ===== toast ===== */
+.toast{
+  position:absolute; left:20px; right:20px; bottom:24px; background:var(--ink); color:#fff;
+  padding:13px 16px; border-radius:14px; font-size:13px; font-weight:600; z-index:20;
+  display:flex; align-items:center; gap:10px; transform:translateY(140%); transition:transform .3s ease;
+  box-shadow:0 12px 24px rgba(0,0,0,.25);
+}
+.toast.show{ transform:translateY(0); }
+.toast svg{ width:17px;height:17px; color:var(--orange-1); flex-shrink:0;}
+
+.hidden{ display:none !important;}
+</style>
+</head>
+<body>
+
+<div class="app-wrap" id="appWrap">
+
+  <!-- ============ LOGIN ============ -->
+  <section class="screen active login-screen" data-screen="login">
+    <div class="statusbar"><span>9:41</span><span>●●●● 📶 🔋</span></div>
+    <div class="scroll" style="padding-bottom:0;display:flex;flex-direction:column;">
+      <div class="login-hero">
+        <div class="logo">
+          <svg viewBox="0 0 24 24" fill="none"><path d="M4 21V9l5-3 5 3v12M14 21V6l6-2v17" stroke="#fff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><path d="M8 13h1M8 17h1M17 9h1M17 13h1M17 17h1" stroke="#fff" stroke-width="1.8" stroke-linecap="round"/></svg>
+        </div>
+        <div class="brand">ENGE<span>NOVA</span></div>
+        <div class="brand-sub">ENGENHARIA E CONSTRUÇÃO</div>
+        <div class="login-title">Controle de <em>Entrega de EPIs</em></div>
+        <div class="login-sub">Faça login para continuar</div>
+      </div>
+      <div class="login-form">
+        <div class="field">
+          <svg class="fico" viewBox="0 0 24 24" fill="none"><path d="M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8Z" stroke="currentColor" stroke-width="1.8"/><path d="M4 20c1.5-4 5-6 8-6s6.5 2 8 6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+          <input id="loginUser" type="text" placeholder="Usuário" value="marcio.almox">
+        </div>
+        <div class="field">
+          <svg class="fico" viewBox="0 0 24 24" fill="none"><rect x="5" y="11" width="14" height="9" rx="2" stroke="currentColor" stroke-width="1.8"/><path d="M8 11V8a4 4 0 1 1 8 0v3" stroke="currentColor" stroke-width="1.8"/></svg>
+          <input id="loginPass" type="password" placeholder="Senha" value="••••••••">
+          <button class="toggle-eye" onclick="togglePass(this)">
+            <svg viewBox="0 0 24 24" fill="none"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7Z" stroke="currentColor" stroke-width="1.8"/><circle cx="12" cy="12" r="3" stroke="currentColor" stroke-width="1.8"/></svg>
+          </button>
+        </div>
+        <div class="login-remember">
+          <label><input type="checkbox" style="accent-color:var(--orange-2)"> Lembrar de mim</label>
+          <a href="#">Esqueci minha senha</a>
+        </div>
+        <button class="btn btn-primary" onclick="doLogin()">
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4M10 17l5-5-5-5M15 12H3" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          ENTRAR
+        </button>
+      </div>
+      <div class="login-skyline">
+        <svg viewBox="0 0 430 120" preserveAspectRatio="none"><path d="M0 120V70h20V50h15V70h10V30h25V70h15V45h20V70h10V20h30V70h10V55h25V70h20V35h15V70h10V60h30V70h15V40h20V70h30V50h20V70h20V30h20V70h30V90H0Z" fill="var(--orange-2)"/></svg>
+      </div>
+      <div class="login-version">Versão 1.0.0</div>
+    </div>
+  </section>
+
+  <!-- ============ HOME ============ -->
+  <section class="screen" data-screen="home">
+    <div class="scroll" style="padding-bottom:90px;">
+      <div class="statusbar" style="color:#fff;"><span>9:41</span><span>●●●● 📶 🔋</span></div>
+      <div class="home-header">
+        <div class="home-topline">
+          <div>
+            <div class="home-hello">Olá, Márcio! 👋</div>
+            <div class="home-wh">
+              <svg viewBox="0 0 24 24" fill="none"><path d="M12 21s7-6.5 7-12a7 7 0 1 0-14 0c0 5.5 7 12 7 12Z" stroke="#fff" stroke-width="1.8"/><circle cx="12" cy="9" r="2.3" stroke="#fff" stroke-width="1.8"/></svg>
+              Almoxarifado Central
+              <svg viewBox="0 0 24 24" fill="none" width="11" height="11"><path d="M6 9l6 6 6-6" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            </div>
+          </div>
+          <button class="iconbtn on-dark" style="position:relative;" onclick="showToast('Nenhuma notificação nova')">
+            <svg viewBox="0 0 24 24" fill="none"><path d="M12 2a6 6 0 0 0-6 6v3.5L4 15h16l-2-3.5V8a6 6 0 0 0-6-6Z" stroke="#fff" stroke-width="1.8" stroke-linejoin="round"/><path d="M9.5 19a2.5 2.5 0 0 0 5 0" stroke="#fff" stroke-width="1.8" stroke-linecap="round"/></svg>
+            <span class="bell-dot"></span>
+          </button>
+        </div>
+        <div class="action-grid">
+          <div class="action-card" onclick="startScan()">
+            <div class="aicon"><svg viewBox="0 0 24 24" fill="none"><path d="M3 8V5a2 2 0 0 1 2-2h3M21 8V5a2 2 0 0 0-2-2h-3M3 16v3a2 2 0 0 0 2 2h3M21 16v3a2 2 0 0 1-2 2h-3M7 12h10" stroke="#fff" stroke-width="1.8" stroke-linecap="round"/></svg></div>
+            <span>Escanear<br>QR Code</span>
+          </div>
+          <div class="action-card" onclick="goTo('searchEmp')">
+            <div class="aicon"><svg viewBox="0 0 24 24" fill="none"><circle cx="9" cy="8" r="3.2" stroke="#fff" stroke-width="1.8"/><path d="M3.5 19c.8-3.2 3-5 5.5-5s4.7 1.8 5.5 5" stroke="#fff" stroke-width="1.8" stroke-linecap="round"/><path d="M16 8h5M18.5 5.5v5" stroke="#fff" stroke-width="1.8" stroke-linecap="round"/></svg></div>
+            <span>Buscar<br>Funcionário</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="section-pad">
+        <div class="summary-card">
+          <div class="summary-item"><div class="summary-num orange">35</div><div class="summary-label">Entregas</div></div>
+          <div class="summary-item"><div class="summary-num">28</div><div class="summary-label">Funcionários</div></div>
+          <div class="summary-item"><div class="summary-num">12</div><div class="summary-label">Tipos de EPI</div></div>
+        </div>
+
+        <div class="section-head">
+          <div class="section-title">Resumo de hoje</div>
+        </div>
+        <div class="section-head" style="margin-top:6px;">
+          <div class="section-title">Últimas entregas</div>
+          <a class="link-see" onclick="goTo('history')">Ver todas</a>
+        </div>
+        <div id="homeRecent"></div>
+      </div>
+    </div>
+    <nav class="bottomnav">
+      <button class="navitem active" data-nav="home" onclick="goTo('home')"><span class="navicon"><svg viewBox="0 0 24 24" fill="none"><path d="M4 11.5 12 4l8 7.5V20a1 1 0 0 1-1 1h-4v-6H9v6H5a1 1 0 0 1-1-1Z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></svg></span>Início</button>
+      <button class="navitem" data-nav="entregas" onclick="goTo('searchEmp')"><span class="navicon"><svg viewBox="0 0 24 24" fill="none"><rect x="3" y="6" width="18" height="14" rx="2" stroke="currentColor" stroke-width="1.8"/><path d="M3 10h18M8 3v4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg></span>Entregas</button>
+      <button class="navitem" data-nav="historico" onclick="goTo('history')"><span class="navicon"><svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="13" r="8" stroke="currentColor" stroke-width="1.8"/><path d="M12 9v4l3 2" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><path d="M9 2h6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg></span>Histórico</button>
+      <button class="navitem" data-nav="menu" onclick="openMenu()"><span class="navicon"><svg viewBox="0 0 24 24" fill="none"><path d="M4 7h16M4 12h16M4 17h16" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg></span>Menu</button>
+    </nav>
+  </section>
+
+  <!-- ============ SCAN ============ -->
+  <section class="screen" data-screen="scan" style="background:#0B0B0E;">
+    <div class="statusbar" style="color:#fff;"><span>9:41</span><span>●●●● 📶 🔋</span></div>
+    <div class="topbar">
+      <button class="iconbtn on-dark" onclick="goTo('home')">
+        <svg viewBox="0 0 24 24" fill="none"><path d="M18 6L6 18M6 6l12 12" stroke="#fff" stroke-width="2" stroke-linecap="round"/></svg>
+      </button>
+      <h1 style="color:#fff;">Escanear QR Code</h1>
+      <button class="iconbtn on-dark"><svg viewBox="0 0 24 24" fill="none"><path d="M11 2 3 14h6l-2 8 10-14h-6l2-6Z" stroke="#fff" stroke-width="1.8" stroke-linejoin="round"/></svg></button>
+    </div>
+    <div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:26px;padding:0 30px;">
+      <p style="color:#fff;opacity:.75;font-size:13.5px;text-align:center;margin:0;">Aponte a câmera para o QR Code do crachá</p>
+      <div style="width:230px;height:230px;position:relative;">
+        <div style="position:absolute;inset:0;border-radius:18px;overflow:hidden;background:repeating-linear-gradient(45deg,#1a1a1f,#1a1a1f 10px,#151518 10px,#151518 20px);"></div>
+        <svg style="position:absolute;inset:0;" viewBox="0 0 100 100"><path d="M4 22V8a4 4 0 0 1 4-4h14M78 4h14a4 4 0 0 1 4 4v14M100 78v14a4 4 0 0 1-4 4H82M22 96H8a4 4 0 0 1-4-4V78" fill="none" stroke="var(--orange-1)" stroke-width="4" stroke-linecap="round"/></svg>
+        <div class="scan-laser" style="position:absolute;left:8px;right:8px;top:8px;height:2px;background:var(--orange-1);box-shadow:0 0 10px var(--orange-1);animation:scanmove 2s ease-in-out infinite;"></div>
+      </div>
+      <p style="color:#fff;opacity:.55;font-size:12.5px;text-align:center;margin:0;">Posicione o QR Code dentro do quadro</p>
+      <button class="btn btn-primary" style="max-width:260px;" onclick="scanSuccess()">Simular leitura</button>
+    </div>
+    <style>@keyframes scanmove{0%{top:8px;}50%{top:210px;}100%{top:8px;}}</style>
+  </section>
+
+  <!-- ============ SEARCH EMPLOYEE ============ -->
+  <section class="screen" data-screen="searchEmp">
+    <div class="statusbar"><span>9:41</span><span>●●●● 📶 🔋</span></div>
+    <div class="topbar">
+      <button class="iconbtn" onclick="goTo('home')"><svg viewBox="0 0 24 24" fill="none"><path d="M15 18l-6-6 6-6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+      <h1>Buscar Funcionário</h1>
+    </div>
+    <div class="scroll">
+      <div class="search-bar">
+        <svg viewBox="0 0 24 24" fill="none"><circle cx="11" cy="11" r="7" stroke="currentColor" stroke-width="1.8"/><path d="m21 21-3.5-3.5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+        <input placeholder="Buscar por nome ou matrícula" oninput="filterEmp(this.value)">
+      </div>
+      <div id="empList"></div>
+    </div>
+  </section>
+
+  <!-- ============ EMPLOYEE FOUND ============ -->
+  <section class="screen" data-screen="employeeFound">
+    <div class="statusbar"><span>9:41</span><span>●●●● 📶 🔋</span></div>
+    <div class="topbar">
+      <button class="iconbtn" onclick="goTo('home')"><svg viewBox="0 0 24 24" fill="none"><path d="M15 18l-6-6 6-6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+      <h1>Funcionário encontrado</h1>
+    </div>
+    <div class="scroll">
+      <div class="emp-hero">
+        <img class="emp-photo" id="empPhoto" src="" alt="">
+        <div class="emp-name" id="empName">—</div>
+        <div class="badge"><span class="dot"></span> Ativo</div>
+      </div>
+      <div style="height:22px;"></div>
+      <div class="detail-card">
+        <div class="detail-row"><span class="detail-label">Matrícula</span><span class="detail-value" id="empMat">—</span></div>
+        <div class="detail-row"><span class="detail-label">Função</span><span class="detail-value" id="empFunc">—</span></div>
+        <div class="detail-row"><span class="detail-label">Empresa</span><span class="detail-value" id="empComp">—</span></div>
+        <div class="detail-row"><span class="detail-label">Centro de custo</span><span class="detail-value" id="empCC">—</span></div>
+      </div>
+    </div>
+    <div class="footer-cta">
+      <button class="btn btn-primary" onclick="goTo('selectEpi')">Continuar
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M5 12h14M13 6l6 6-6 6" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </button>
+    </div>
+  </section>
+
+  <!-- ============ SELECT EPI ============ -->
+  <section class="screen" data-screen="selectEpi">
+    <div class="statusbar"><span>9:41</span><span>●●●● 📶 🔋</span></div>
+    <div class="topbar">
+      <button class="iconbtn" onclick="goTo('employeeFound')"><svg viewBox="0 0 24 24" fill="none"><path d="M15 18l-6-6 6-6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+      <h1>Selecionar EPI</h1>
+    </div>
+    <div class="scroll">
+      <div class="search-bar">
+        <svg viewBox="0 0 24 24" fill="none"><circle cx="11" cy="11" r="7" stroke="currentColor" stroke-width="1.8"/><path d="m21 21-3.5-3.5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+        <input placeholder="Buscar EPI" oninput="filterEpi(this.value)">
+      </div>
+      <div style="padding:0 20px 6px;font-size:12.5px;font-weight:700;color:var(--ink-soft);">Selecione o(s) EPI(s) entregue(s)</div>
+      <div id="epiList"></div>
+    </div>
+    <div class="footer-cta">
+      <button class="btn btn-primary" id="epiContinueBtn" disabled onclick="startQtyFlow()">Continuar (0)
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M5 12h14M13 6l6 6-6 6" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </button>
+    </div>
+  </section>
+
+  <!-- ============ QUANTITY ============ -->
+  <section class="screen" data-screen="quantity">
+    <div class="statusbar"><span>9:41</span><span>●●●● 📶 🔋</span></div>
+    <div class="topbar">
+      <button class="iconbtn" onclick="goTo('selectEpi')"><svg viewBox="0 0 24 24" fill="none"><path d="M15 18l-6-6 6-6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+      <h1>Quantidade</h1>
+    </div>
+    <div class="scroll">
+      <div class="qty-card">
+        <div class="epi-icon" id="qtyIcon"></div>
+        <div>
+          <div class="qty-name" id="qtyName">—</div>
+          <div class="qty-ca" id="qtyCA">CA: —</div>
+        </div>
+      </div>
+      <span class="field-label" style="margin-top:2px;">Quantidade</span>
+      <div class="stepper">
+        <button class="step-btn" onclick="stepQty(-1)">−</button>
+        <div class="step-val" id="qtyVal">1</div>
+        <button class="step-btn" onclick="stepQty(1)">+</button>
+      </div>
+      <span class="field-label">Observações (opcional)</span>
+      <div style="padding:0 20px;">
+        <div class="field">
+          <textarea id="qtyObs" maxlength="200" placeholder="Digite alguma observação..." oninput="document.getElementById('obsCount').textContent=this.value.length"></textarea>
+        </div>
+        <div class="charcount"><span id="obsCount">0</span>/200</div>
+      </div>
+    </div>
+    <div class="footer-cta">
+      <button class="btn btn-primary" id="qtyContinueBtn" onclick="nextQtyStep()">Continuar
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M5 12h14M13 6l6 6-6 6" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </button>
+    </div>
+  </section>
+
+  <!-- ============ REASON ============ -->
+  <section class="screen" data-screen="reason">
+    <div class="statusbar"><span>9:41</span><span>●●●● 📶 🔋</span></div>
+    <div class="topbar">
+      <button class="iconbtn" onclick="goTo('quantity')"><svg viewBox="0 0 24 24" fill="none"><path d="M15 18l-6-6 6-6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+      <h1>Motivo da entrega</h1>
+    </div>
+    <div class="scroll">
+      <div style="padding:0 20px 10px;font-size:13px;font-weight:700;">Selecione o motivo</div>
+      <div id="reasonList"></div>
+    </div>
+    <div class="footer-cta">
+      <button class="btn btn-primary" id="reasonContinueBtn" disabled onclick="goTo('signature')">Continuar
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M5 12h14M13 6l6 6-6 6" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </button>
+    </div>
+  </section>
+
+  <!-- ============ SIGNATURE ============ -->
+  <section class="screen" data-screen="signature">
+    <div class="statusbar"><span>9:41</span><span>●●●● 📶 🔋</span></div>
+    <div class="topbar">
+      <button class="iconbtn" onclick="goTo('reason')"><svg viewBox="0 0 24 24" fill="none"><path d="M15 18l-6-6 6-6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+      <h1>Assinatura</h1>
+    </div>
+    <div class="scroll">
+      <div class="sig-title" id="sigEmpName">—</div>
+      <div class="sig-sub">Assine abaixo para confirmar o recebimento</div>
+      <div class="sig-pad-wrap">
+        <canvas id="sigCanvas"></canvas>
+        <div class="sig-placeholder" id="sigPlaceholder">Assine aqui</div>
+      </div>
+      <button class="sig-clear" onclick="clearSig()">
+        <svg viewBox="0 0 24 24" fill="none"><path d="M3 12a9 9 0 1 0 3-6.7" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><path d="M3 4v5h5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        LIMPAR
+      </button>
+    </div>
+    <div class="footer-cta">
+      <button class="btn btn-primary" onclick="confirmSignature()">CONFIRMAR ASSINATURA
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M20 6 9 17l-5-5" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </button>
+    </div>
+  </section>
+
+  <!-- ============ SUCCESS ============ -->
+  <section class="screen" data-screen="success">
+    <div class="scroll" style="padding-bottom:100px;">
+      <div class="statusbar" style="color:#fff;"><span>9:41</span><span>●●●● 📶 🔋</span></div>
+      <div class="success-top">
+        <div class="confetti" id="confettiWrap"></div>
+        <div class="check-circle"><svg viewBox="0 0 24 24" fill="none"><path d="M20 6 9 17l-5-5" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+        <div class="success-title">Entrega registrada<b>com sucesso!</b></div>
+        <div class="success-sub">O recebimento foi registrado com todas as informações.</div>
+      </div>
+      <div style="height:24px;"></div>
+      <div class="detail-card">
+        <div class="detail-row"><span class="detail-label">Funcionário</span><span class="detail-value" id="sucFunc">—</span></div>
+        <div class="detail-row"><span class="detail-label">Matrícula</span><span class="detail-value" id="sucMat">—</span></div>
+        <div class="detail-row"><span class="detail-label">EPI entregue</span><span class="detail-value" id="sucEpi">—</span></div>
+        <div class="detail-row"><span class="detail-label">Quantidade</span><span class="detail-value" id="sucQty">—</span></div>
+        <div class="detail-row"><span class="detail-label">Motivo</span><span class="detail-value" id="sucMotivo">—</span></div>
+        <div class="detail-row"><span class="detail-label">Responsável</span><span class="detail-value">Márcio (Almoxarifado)</span></div>
+        <div class="detail-row"><span class="detail-label">Data e hora</span><span class="detail-value" id="sucDate">—</span></div>
+      </div>
+      <div style="padding:22px 20px 0;display:flex;flex-direction:column;gap:10px;">
+        <button class="btn btn-primary" onclick="resetFlow()">NOVA ENTREGA</button>
+        <button class="btn btn-outline" onclick="showToast('Comprovante enviado por e-mail')">VER COMPROVANTE</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ HISTORY ============ -->
+  <section class="screen" data-screen="history">
+    <div class="statusbar"><span>9:41</span><span>●●●● 📶 🔋</span></div>
+    <div class="topbar">
+      <button class="iconbtn" onclick="goTo('home')"><svg viewBox="0 0 24 24" fill="none"><path d="M15 18l-6-6 6-6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+      <h1>Histórico de entregas</h1>
+      <button class="iconbtn" onclick="showToast('Filtros avançados em breve')"><svg viewBox="0 0 24 24" fill="none"><path d="M4 5h16l-6 8v5l-4 2v-7L4 5Z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></svg></button>
+    </div>
+    <div class="scroll">
+      <div class="search-bar">
+        <svg viewBox="0 0 24 24" fill="none"><circle cx="11" cy="11" r="7" stroke="currentColor" stroke-width="1.8"/><path d="m21 21-3.5-3.5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+        <input placeholder="Buscar por nome ou matrícula" oninput="filterHistory(this.value)">
+      </div>
+      <div class="chips">
+        <div class="chip active" data-range="hoje" onclick="setRange(this)">Hoje</div>
+        <div class="chip" data-range="ontem" onclick="setRange(this)">Ontem</div>
+        <div class="chip" data-range="semana" onclick="setRange(this)">Esta semana</div>
+        <div class="chip" data-range="mes" onclick="setRange(this)">Este mês</div>
+      </div>
+      <div id="historyList" style="padding:0 20px;"></div>
+    </div>
+    <nav class="bottomnav">
+      <button class="navitem" onclick="goTo('home')"><span class="navicon"><svg viewBox="0 0 24 24" fill="none"><path d="M4 11.5 12 4l8 7.5V20a1 1 0 0 1-1 1h-4v-6H9v6H5a1 1 0 0 1-1-1Z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></svg></span>Início</button>
+      <button class="navitem" onclick="goTo('searchEmp')"><span class="navicon"><svg viewBox="0 0 24 24" fill="none"><rect x="3" y="6" width="18" height="14" rx="2" stroke="currentColor" stroke-width="1.8"/><path d="M3 10h18M8 3v4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg></span>Entregas</button>
+      <button class="navitem active" onclick="goTo('history')"><span class="navicon"><svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="13" r="8" stroke="currentColor" stroke-width="1.8"/><path d="M12 9v4l3 2" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><path d="M9 2h6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg></span>Histórico</button>
+      <button class="navitem" onclick="openMenu()"><span class="navicon"><svg viewBox="0 0 24 24" fill="none"><path d="M4 7h16M4 12h16M4 17h16" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg></span>Menu</button>
+    </nav>
+  </section>
+
+  <!-- ============ MENU DRAWER (overlay on top of any screen) ============ -->
+  <div class="overlay" id="menuOverlay" onclick="closeMenu()"></div>
+  <div class="drawer" id="menuDrawer">
+    <div class="drawer-brand">
+      <div class="logo"><svg viewBox="0 0 24 24" fill="none"><path d="M4 21V9l5-3 5 3v12M14 21V6l6-2v17" stroke="#fff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+      <div><b>ENGE<span style="color:var(--orange-2);">NOVA</span></b><small>ENGENHARIA E CONSTRUÇÃO</small></div>
+    </div>
+    <div class="drawer-list">
+      <div class="drawer-item" onclick="goTo('home');closeMenu();"><svg viewBox="0 0 24 24" fill="none"><path d="M4 11.5 12 4l8 7.5V20a1 1 0 0 1-1 1h-4v-6H9v6H5a1 1 0 0 1-1-1Z" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/></svg>Início</div>
+      <div class="drawer-item" onclick="goTo('searchEmp');closeMenu();"><svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="1.7"/><path d="M12 7v5l3 2" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>Nova entrega</div>
+      <div class="drawer-item" onclick="goTo('history');closeMenu();"><svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="13" r="8" stroke="currentColor" stroke-width="1.7"/><path d="M12 9v4l3 2" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>Histórico de entregas</div>
+      <div class="drawer-item" onclick="showToast('Tela de funcionários em breve');closeMenu();"><svg viewBox="0 0 24 24" fill="none"><circle cx="9" cy="8" r="3.2" stroke="currentColor" stroke-width="1.7"/><path d="M3.5 19c.8-3.2 3-5 5.5-5s4.7 1.8 5.5 5" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/><circle cx="18" cy="9" r="2.3" stroke="currentColor" stroke-width="1.7"/></svg>Funcionários</div>
+      <div class="drawer-item" onclick="showToast('Tela de EPIs em breve');closeMenu();"><svg viewBox="0 0 24 24" fill="none"><path d="M12 3 4 6v6c0 5 3.5 8 8 9 4.5-1 8-4 8-9V6l-8-3Z" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/></svg>EPIs</div>
+      <div class="drawer-item" onclick="showToast('Relatórios em breve');closeMenu();"><svg viewBox="0 0 24 24" fill="none"><path d="M7 3h7l4 4v14H7z" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/><path d="M9 12h6M9 16h6" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>Relatórios</div>
+      <div class="drawer-item" onclick="showToast('Estatísticas em breve');closeMenu();"><svg viewBox="0 0 24 24" fill="none"><path d="M4 20V10M11 20V4M18 20v-7" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"/></svg>Estatísticas</div>
+      <div class="drawer-item" onclick="showToast('Você já está no Almoxarifado Central');closeMenu();"><svg viewBox="0 0 24 24" fill="none"><path d="M4 21V9l8-5 8 5v12" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/><path d="M9 21v-6h6v6" stroke="currentColor" stroke-width="1.7"/></svg>Almoxarifados</div>
+      <div class="drawer-item" onclick="showToast('Configurações em breve');closeMenu();"><svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="3" stroke="currentColor" stroke-width="1.7"/><path d="M19 12a7 7 0 0 0-.1-1.2l2-1.6-2-3.4-2.3.9a7 7 0 0 0-2-1.2L14 3h-4l-.4 2.5a7 7 0 0 0-2 1.2l-2.3-.9-2 3.4 2 1.6a7 7 0 0 0 0 2.4l-2 1.6 2 3.4 2.3-.9a7 7 0 0 0 2 1.2L10 21h4l.4-2.5a7 7 0 0 0 2-1.2l2.3.9 2-3.4-2-1.6c.07-.4.1-.8.1-1.2Z" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/></svg>Configurações</div>
+      <div class="drawer-item exit" onclick="doLogout()"><svg viewBox="0 0 24 24" fill="none"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><path d="M16 17l5-5-5-5M21 12H9" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>Sair</div>
+    </div>
+    <div class="drawer-foot">Versão 1.0.0</div>
+  </div>
+
+  <div class="toast" id="toast"><svg viewBox="0 0 24 24" fill="none"><path d="M12 8v5M12 16h.01" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="1.8"/></svg><span id="toastMsg"></span></div>
+
+</div>
+
+<script>
+/* ============ MOCK DATA ============ */
+const EPIS = [
+  {id:'pff2', nome:'Máscara PFF2', ca:'12345', icon:'mask'},
+  {id:'luvaraspa', nome:'Luva Raspa', ca:'30981', icon:'glove'},
+  {id:'oculos', nome:'Óculos de Segurança', ca:'20456', icon:'goggles'},
+  {id:'protetor', nome:'Protetor Auricular', ca:'18823', icon:'ear'},
+  {id:'respirador', nome:'Respirador', ca:'40112', icon:'mask'},
+  {id:'luvavaqueta', nome:'Luva Vaqueta', ca:'30982', icon:'glove'},
+  {id:'avental', nome:'Avental', ca:'50221', icon:'apron'},
+  {id:'bota', nome:'Bota de Segurança', ca:'60110', icon:'boot'},
+  {id:'colete', nome:'Colete Refletivo', ca:'70334', icon:'vest'},
+  {id:'outro', nome:'Outro (especificar)', ca:'—', icon:'other'}
+];
+const REASONS = ['Desgaste','Dano','Rotina','Atividade especial','Perda','Extravio','Novo colaborador','Outro'];
+const EMPLOYEES = [
+  {mat:'2541', nome:'João Carlos da Silva', funcao:'Soldador', empresa:'Engenova', cc:'Obras Industriais', foto:'https://images.unsplash.com/photo-1560250097-0b93528c311a?w=200&h=200&fit=crop&crop=faces'},
+  {mat:'1122', nome:'Pedro Santos', funcao:'Eletricista', empresa:'Engenova', cc:'Manutenção', foto:'https://images.unsplash.com/photo-1633332755192-727a05c4013d?w=200&h=200&fit=crop&crop=faces'},
+  {mat:'1987', nome:'Carlos Souza', funcao:'Pedreiro', empresa:'Engenova', cc:'Obras Civis', foto:'https://images.unsplash.com/photo-1552058544-f2b08422138a?w=200&h=200&fit=crop&crop=faces'},
+  {mat:'3390', nome:'João Silva', funcao:'Encarregado', empresa:'Engenova', cc:'Obras Industriais', foto:'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=200&h=200&fit=crop&crop=faces'},
+  {mat:'4471', nome:'Marcos Lima', funcao:'Almoxarife', empresa:'Engenova', cc:'Almoxarifado', foto:'https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?w=200&h=200&fit=crop&crop=faces'}
+];
+let HISTORY = [
+  {time:'08:46', nome:'João Carlos da Silva', mat:'2541', epi:'Máscara PFF2', qty:1, range:'hoje'},
+  {time:'08:37', nome:'Pedro Santos', mat:'1122', epi:'Óculos de Segurança', qty:1, range:'hoje'},
+  {time:'08:25', nome:'Carlos Souza', mat:'1987', epi:'Luva Raspa', qty:2, range:'hoje'},
+  {time:'08:10', nome:'João Silva', mat:'3390', epi:'Protetor Auricular', qty:1, range:'hoje'},
+  {time:'07:58', nome:'Marcos Lima', mat:'4471', epi:'Avental', qty:1, range:'hoje'},
+  {time:'17:20', nome:'Pedro Santos', mat:'1122', epi:'Bota de Segurança', qty:1, range:'ontem'},
+  {time:'11:05', nome:'Carlos Souza', mat:'1987', epi:'Colete Refletivo', qty:1, range:'semana'},
+  {time:'09:40', nome:'João Carlos da Silva', mat:'2541', epi:'Luva Vaqueta', qty:2, range:'mes'}
+];
+
+const ICONS = {
+  mask:'<svg viewBox="0 0 24 24" fill="none"><path d="M4 10c0-2 2-3 8-3s8 1 8 3v3c0 3-3.5 5-8 5s-8-2-8-5v-3Z" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/><path d="M4 12h16" stroke="currentColor" stroke-width="1.7"/></svg>',
+  glove:'<svg viewBox="0 0 24 24" fill="none"><path d="M7 11V5a1.5 1.5 0 0 1 3 0v4M10 9V4a1.5 1.5 0 0 1 3 0v5M13 9V5a1.5 1.5 0 0 1 3 0v6M16 10.5V8a1.5 1.5 0 0 1 3 0v6c0 3.5-2.5 6-6 6H10c-2 0-4-1.5-4-4v-5.5a1.5 1.5 0 0 1 3 0" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/></svg>',
+  goggles:'<svg viewBox="0 0 24 24" fill="none"><circle cx="7" cy="12" r="3.4" stroke="currentColor" stroke-width="1.7"/><circle cx="17" cy="12" r="3.4" stroke="currentColor" stroke-width="1.7"/><path d="M10.3 12h3.4M3 10l1-2M21 10l-1-2" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>',
+  ear:'<svg viewBox="0 0 24 24" fill="none"><path d="M8 13a5 5 0 0 1 9-3M17 10a4 4 0 1 1-4 6" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/><path d="M8 13c-2 1-3 2.5-2 5s3 2 4 .5" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>',
+  apron:'<svg viewBox="0 0 24 24" fill="none"><path d="M8 3h8l-1 5H9L8 3Z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><path d="M9 8h6l2 13H7L9 8Z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></svg>',
+  boot:'<svg viewBox="0 0 24 24" fill="none"><path d="M9 3v9l-5 4v3a1 1 0 0 0 1 1h15a1 1 0 0 0 1-1c0-3-2-4-5-5l-3-1V3H9Z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/></svg>',
+  vest:'<svg viewBox="0 0 24 24" fill="none"><path d="M9 3 6 5v16h4V10h4v11h4V5l-3-2-2 2-2-2Z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/></svg>',
+  other:'<svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="1.7"/><path d="M12 16h.01M12 8v5" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>'
+};
+
+/* ============ STATE ============ */
+let state = {
+  employee:null,
+  selectedEpis:[],
+  qtyQueue:[],
+  qtyIndex:0,
+  results:{}, // {epiId:{qty,obs}}
+  motivo:null
+};
+
+/* ============ NAVIGATION ============ */
+function goTo(name){
+  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+  const el = document.querySelector('.screen[data-screen="'+name+'"]');
+  el.classList.add('active');
+  document.querySelectorAll('.navitem').forEach(n=>n.classList.remove('active'));
+  if(name==='home'){ renderHomeRecent(); }
+  if(name==='searchEmp'){ renderEmpList(EMPLOYEES); }
+  if(name==='selectEpi'){ renderEpiList(EPIS); }
+  if(name==='reason'){ renderReasonList(); }
+  if(name==='history'){ renderHistory('hoje'); }
+  if(name==='signature'){ initSignature(); document.getElementById('sigEmpName').textContent = state.employee ? state.employee.nome : '—'; }
+}
+
+function togglePass(btn){
+  const input = btn.previousElementSibling;
+  input.type = input.type==='password' ? 'text' : 'password';
+}
+
+function doLogin(){
+  goTo('home');
+}
+function doLogout(){
+  closeMenu();
+  goTo('login');
+}
+
+/* ============ TOAST ============ */
+function showToast(msg){
+  const t = document.getElementById('toast');
+  document.getElementById('toastMsg').textContent = msg;
+  t.classList.add('show');
+  clearTimeout(window._toastTimer);
+  window._toastTimer = setTimeout(()=>t.classList.remove('show'), 2200);
+}
+
+/* ============ MENU DRAWER ============ */
+function openMenu(){
+  document.getElementById('menuOverlay').classList.add('show');
+  document.getElementById('menuDrawer').classList.add('show');
+}
+function closeMenu(){
+  document.getElementById('menuOverlay').classList.remove('show');
+  document.getElementById('menuDrawer').classList.remove('show');
+}
+
+/* ============ HOME RECENT ============ */
+function renderHomeRecent(){
+  const wrap = document.getElementById('homeRecent');
+  wrap.innerHTML = HISTORY.slice(0,3).map(h=>`
+    <div class="delivery-row" onclick="goTo('history')">
+      <div class="avatar">${initials(h.nome)}</div>
+      <div>
+        <div class="d-name">${h.nome}</div>
+        <div class="d-sub">Matrícula: ${h.mat}</div>
+      </div>
+      <div class="d-time">${h.time}</div>
+    </div>
+  `).join('');
+}
+function initials(name){
+  return name.split(' ').filter(Boolean).slice(0,2).map(w=>w[0]).join('').toUpperCase();
+}
+
+/* ============ SCAN ============ */
+function startScan(){ goTo('scan'); }
+function scanSuccess(){
+  const emp = EMPLOYEES[0];
+  selectEmployee(emp);
+}
+
+/* ============ SEARCH EMPLOYEE ============ */
+function renderEmpList(list){
+  const wrap = document.getElementById('empList');
+  if(list.length===0){
+    wrap.innerHTML = '<div style="text-align:center;color:var(--muted);font-size:13px;padding:30px 0;">Nenhum funcionário encontrado</div>';
+    return;
+  }
+  wrap.innerHTML = list.map(e=>`
+    <div class="emp-list-item" onclick='selectEmployeeByMat("${e.mat}")'>
+      <img class="avatar" style="object-fit:cover;" src="${e.foto}">
+      <div>
+        <div class="d-name">${e.nome}</div>
+        <div class="d-sub">Matrícula: ${e.mat} · ${e.funcao}</div>
+      </div>
+      <svg class="chev" style="margin-left:auto;" viewBox="0 0 24 24" fill="none"><path d="M9 6l6 6-6 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    </div>
+  `).join('');
+}
+function filterEmp(q){
+  q = q.toLowerCase();
+  renderEmpList(EMPLOYEES.filter(e=> e.nome.toLowerCase().includes(q) || e.mat.includes(q)));
+}
+function selectEmployeeByMat(mat){
+  const emp = EMPLOYEES.find(e=>e.mat===mat);
+  selectEmployee(emp);
+}
+function selectEmployee(emp){
+  state.employee = emp;
+  document.getElementById('empPhoto').src = emp.foto;
+  document.getElementById('empName').textContent = emp.nome;
+  document.getElementById('empMat').textContent = emp.mat;
+  document.getElementById('empFunc').textContent = emp.funcao;
+  document.getElementById('empComp').textContent = emp.empresa;
+  document.getElementById('empCC').textContent = emp.cc;
+  goTo('employeeFound');
+}
+
+/* ============ SELECT EPI ============ */
+function renderEpiList(list){
+  const wrap = document.getElementById('epiList');
+  wrap.innerHTML = list.map(e=>{
+    const checked = state.selectedEpis.includes(e.id);
+    return `
+    <div class="epi-item ${checked?'checked':''}" onclick="toggleEpi('${e.id}')">
+      <div class="checkbox ${checked?'on':''}"><svg viewBox="0 0 24 24" fill="none"><path d="M20 6 9 17l-5-5" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+      <div class="epi-icon">${ICONS[e.icon]}</div>
+      <div class="epi-name">${e.nome}</div>
+    </div>`;
+  }).join('');
+}
+function filterEpi(q){
+  q=q.toLowerCase();
+  renderEpiList(EPIS.filter(e=>e.nome.toLowerCase().includes(q)));
+}
+function toggleEpi(id){
+  const idx = state.selectedEpis.indexOf(id);
+  if(idx>-1) state.selectedEpis.splice(idx,1); else state.selectedEpis.push(id);
+  renderEpiList(EPIS);
+  const btn = document.getElementById('epiContinueBtn');
+  btn.textContent = '';
+  btn.innerHTML = `Continuar (${state.selectedEpis.length}) <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M5 12h14M13 6l6 6-6 6" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
+  btn.disabled = state.selectedEpis.length===0;
+}
+
+/* ============ QUANTITY FLOW ============ */
+function startQtyFlow(){
+  state.qtyQueue = [...state.selectedEpis];
+  state.qtyIndex = 0;
+  state.results = {};
+  loadQtyScreen();
+  goTo('quantity');
+}
+function loadQtyScreen(){
+  const id = state.qtyQueue[state.qtyIndex];
+  const epi = EPIS.find(e=>e.id===id);
+  document.getElementById('qtyIcon').innerHTML = ICONS[epi.icon];
+  document.getElementById('qtyName').textContent = epi.nome;
+  document.getElementById('qtyCA').textContent = 'CA: ' + epi.ca;
+  document.getElementById('qtyVal').textContent = '1';
+  document.getElementById('qtyObs').value = '';
+  document.getElementById('obsCount').textContent = '0';
+  const isLast = state.qtyIndex === state.qtyQueue.length - 1;
+  document.getElementById('qtyContinueBtn').innerHTML = (isLast ? 'Continuar' : 'Próximo EPI') + ' <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M5 12h14M13 6l6 6-6 6" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+}
+function stepQty(delta){
+  const el = document.getElementById('qtyVal');
+  let v = parseInt(el.textContent) + delta;
+  if(v<1) v=1;
+  if(v>50) v=50;
+  el.textContent = v;
+}
+function nextQtyStep(){
+  const id = state.qtyQueue[state.qtyIndex];
+  state.results[id] = { qty: parseInt(document.getElementById('qtyVal').textContent), obs: document.getElementById('qtyObs').value };
+  if(state.qtyIndex < state.qtyQueue.length - 1){
+    state.qtyIndex++;
+    loadQtyScreen();
+  } else {
+    goTo('reason');
+  }
+}
+
+/* ============ REASON ============ */
+function renderReasonList(){
+  const wrap = document.getElementById('reasonList');
+  wrap.innerHTML = REASONS.map(r=>{
+    const checked = state.motivo===r;
+    return `<div class="radio-item ${checked?'checked':''}" onclick="selectReason('${r}')">
+      <div class="radio ${checked?'on':''}"></div>
+      <div style="font-size:14px;font-weight:600;">${r}</div>
+    </div>`;
+  }).join('');
+}
+function selectReason(r){
+  state.motivo = r;
+  renderReasonList();
+  document.getElementById('reasonContinueBtn').disabled = false;
+}
+
+/* ============ SIGNATURE ============ */
+let sigCtx, drawing=false, hasSig=false;
+function initSignature(){
+  const canvas = document.getElementById('sigCanvas');
+  const wrap = canvas.parentElement;
+  const ratio = window.devicePixelRatio || 1;
+  canvas.width = wrap.clientWidth * ratio;
+  canvas.height = wrap.clientHeight * ratio;
+  sigCtx = canvas.getContext('2d');
+  sigCtx.scale(ratio, ratio);
+  sigCtx.lineWidth = 2.4;
+  sigCtx.lineCap = 'round';
+  sigCtx.strokeStyle = '#1B1B1F';
+  hasSig = false;
+  document.getElementById('sigPlaceholder').style.display = 'flex';
+
+  function pos(e){
+    const r = canvas.getBoundingClientRect();
+    const cx = (e.touches ? e.touches[0].clientX : e.clientX) - r.left;
+    const cy = (e.touches ? e.touches[0].clientY : e.clientY) - r.top;
+    return {x:cx, y:cy};
+  }
+  function start(e){
+    e.preventDefault();
+    drawing = true; hasSig = true;
+    document.getElementById('sigPlaceholder').style.display = 'none';
+    const p = pos(e);
+    sigCtx.beginPath();
+    sigCtx.moveTo(p.x, p.y);
+  }
+  function move(e){
+    if(!drawing) return;
+    e.preventDefault();
+    const p = pos(e);
+    sigCtx.lineTo(p.x, p.y);
+    sigCtx.stroke();
+  }
+  function end(){ drawing = false; }
+
+  canvas.onmousedown = start; canvas.onmousemove = move; window.onmouseup = end;
+  canvas.ontouchstart = start; canvas.ontouchmove = move; canvas.ontouchend = end;
+}
+function clearSig(){
+  const canvas = document.getElementById('sigCanvas');
+  sigCtx.clearRect(0,0,canvas.width,canvas.height);
+  hasSig = false;
+  document.getElementById('sigPlaceholder').style.display = 'flex';
+}
+function confirmSignature(){
+  if(!hasSig){ showToast('Assine para confirmar o recebimento'); return; }
+  finalizeDelivery();
+}
+
+/* ============ FINALIZE ============ */
+function finalizeDelivery(){
+  const items = state.qtyQueue.map(id=>{
+    const epi = EPIS.find(e=>e.id===id);
+    const r = state.results[id];
+    return { nome: epi.nome, qty: r.qty };
+  });
+  const now = new Date();
+  const dateStr = now.toLocaleDateString('pt-BR') + ' ' + now.toTimeString().slice(0,5);
+
+  document.getElementById('sucFunc').textContent = state.employee.nome;
+  document.getElementById('sucMat').textContent = state.employee.mat;
+  document.getElementById('sucEpi').textContent = items.map(i=>i.nome).join(', ');
+  document.getElementById('sucQty').textContent = items.map(i=>i.qty).reduce((a,b)=>a+b,0);
+  document.getElementById('sucMotivo').textContent = state.motivo;
+  document.getElementById('sucDate').textContent = dateStr;
+
+  items.forEach(i=>{
+    HISTORY.unshift({time: now.toTimeString().slice(0,5), nome: state.employee.nome, mat: state.employee.mat, epi: i.nome, qty: i.qty, range:'hoje'});
+  });
+
+  buildConfetti();
+  goTo('success');
+}
+function buildConfetti(){
+  const wrap = document.getElementById('confettiWrap');
+  const colors = ['#FF8A3D','#EE5A24','#1E8F5E','#fff'];
+  wrap.innerHTML = '';
+  for(let i=0;i<18;i++){
+    const s = document.createElement('i');
+    s.style.left = Math.random()*100+'%';
+    s.style.top = (Math.random()*60)+'%';
+    s.style.width = (4+Math.random()*4)+'px';
+    s.style.height = (4+Math.random()*10)+'px';
+    s.style.background = colors[i%colors.length];
+    s.style.transform = 'rotate('+(Math.random()*360)+'deg)';
+    s.style.opacity = .8;
+    wrap.appendChild(s);
+  }
+}
+function resetFlow(){
+  state.employee = null;
+  state.selectedEpis = [];
+  state.qtyQueue = [];
+  state.qtyIndex = 0;
+  state.results = {};
+  state.motivo = null;
+  goTo('home');
+}
+
+/* ============ HISTORY ============ */
+function setRange(chipEl){
+  document.querySelectorAll('.chip').forEach(c=>c.classList.remove('active'));
+  chipEl.classList.add('active');
+  renderHistory(chipEl.dataset.range);
+}
+function renderHistory(range){
+  const list = HISTORY.filter(h=> range==='hoje' ? h.range==='hoje' : true);
+  const wrap = document.getElementById('historyList');
+  if(list.length===0){
+    wrap.innerHTML = '<div style="text-align:center;color:var(--muted);font-size:13px;padding:30px 0;">Nenhuma entrega encontrada</div>';
+    return;
+  }
+  wrap.innerHTML = list.map(h=>`
+    <div class="delivery-row">
+      <div class="d-time" style="margin-left:0;min-width:40px;">${h.time}</div>
+      <div>
+        <div class="d-name">${h.nome}</div>
+        <div class="d-sub">${h.epi}</div>
+      </div>
+      <div class="d-qty" style="margin-left:auto;">${h.qty} un.</div>
+      <svg class="chev" viewBox="0 0 24 24" fill="none"><path d="M9 6l6 6-6 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    </div>
+  `).join('');
+}
+function filterHistory(q){
+  q=q.toLowerCase();
+  const active = document.querySelector('.chip.active').dataset.range;
+  const base = HISTORY.filter(h=> active==='hoje' ? h.range==='hoje' : true);
+  const wrap = document.getElementById('historyList');
+  const list = base.filter(h=>h.nome.toLowerCase().includes(q) || h.mat.includes(q));
+  wrap.innerHTML = list.map(h=>`
+    <div class="delivery-row">
+      <div class="d-time" style="margin-left:0;min-width:40px;">${h.time}</div>
+      <div><div class="d-name">${h.nome}</div><div class="d-sub">${h.epi}</div></div>
+      <div class="d-qty" style="margin-left:auto;">${h.qty} un.</div>
+    </div>`).join('') || '<div style="text-align:center;color:var(--muted);font-size:13px;padding:30px 0;">Nenhuma entrega encontrada</div>';
+}
+
+/* init */
+renderHomeRecent();
+</script>
+</body>
+</html>

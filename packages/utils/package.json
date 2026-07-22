@@ -1,0 +1,6 @@
+{
+  "name": "@epi-manager/utils",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Funcoes puras compartilhadas (formatadores, validador de CPF/CA, etc.)"
+}

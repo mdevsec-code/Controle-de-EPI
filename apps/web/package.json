@@ -1,0 +1,6 @@
+{
+  "name": "@epi-manager/web",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Painel administrativo (dashboard, cadastros, relatorios) - React + Vite + TS"
+}

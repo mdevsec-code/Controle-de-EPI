@@ -1,0 +1,6 @@
+{
+  "name": "@epi-manager/api",
+  "private": true,
+  "version": "0.1.0",
+  "description": "API - Node + Express + TypeScript"
+}

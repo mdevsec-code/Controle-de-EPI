@@ -1,0 +1,6 @@
+{
+  "name": "@epi-manager/hooks",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Hooks React compartilhados entre web e mobile-pwa"
+}
