@@ -1,0 +1,11 @@
+// Schema inicial - apenas datasource e generator.
+// As entidades de negocio (Empresa, Colaborador, EPI, Estoque, Entrega...)
+// serao adicionadas na etapa "Banco de dados" do roadmap.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}

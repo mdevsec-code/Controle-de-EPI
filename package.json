@@ -13,12 +13,20 @@
     "lint": "turbo run lint",
     "test": "turbo run test",
     "format": "prettier --write .",
-    "prepare": "husky"
+    "prepare": "husky",
+    "db:generate": "prisma generate",
+    "db:migrate": "prisma migrate dev",
+    "db:studio": "prisma studio",
+    "docker:up": "docker compose -f docker/docker-compose.yml up -d",
+    "docker:down": "docker compose -f docker/docker-compose.yml down"
   },
   "devDependencies": {
     "turbo": "^2.3.3",
     "prettier": "^3.4.2",
+    "dotenv": "^17.4.2",
     "husky": "^9.1.7",
+    "prisma": "^7.9.0",
+    "@prisma/client": "^7.9.0",
     "@commitlint/cli": "^19.6.1",
     "@commitlint/config-conventional": "^19.6.0"
   }

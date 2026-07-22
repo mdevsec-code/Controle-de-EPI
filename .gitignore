@@ -27,6 +27,10 @@ Thumbs.db
 # Claude Code local settings
 .claude/settings.local.json
 
+# TypeScript incremental build info
+*.tsbuildinfo
+.tsbuild/
+
 # Prisma
 database/prisma/*.db
 

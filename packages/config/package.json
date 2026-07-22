@@ -2,5 +2,15 @@
   "name": "@epi-manager/config",
   "private": true,
   "version": "0.1.0",
-  "description": "Configuracoes compartilhadas: eslint, tsconfig, tailwind"
+  "type": "module",
+  "description": "Configuracoes compartilhadas: eslint, tsconfig, tailwind",
+  "dependencies": {
+    "@eslint/js": "^9.17.0",
+    "eslint": "^9.17.0",
+    "eslint-config-prettier": "^9.1.0",
+    "eslint-plugin-react-hooks": "^5.1.0",
+    "eslint-plugin-react-refresh": "^0.4.16",
+    "typescript": "^5.7.2",
+    "typescript-eslint": "^8.18.2"
+  }
 }

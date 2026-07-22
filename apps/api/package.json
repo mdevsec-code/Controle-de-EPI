@@ -2,5 +2,41 @@
   "name": "@epi-manager/api",
   "private": true,
   "version": "0.1.0",
-  "description": "API - Node + Express + TypeScript"
+  "description": "API - Node + Express + TypeScript",
+  "type": "module",
+  "scripts": {
+    "dev": "tsx watch src/main.ts",
+    "build": "tsc -b",
+    "start": "node dist/main.js",
+    "lint": "eslint ."
+  },
+  "dependencies": {
+    "@epi-manager/types": "workspace:*",
+    "@prisma/client": "^7.9.0",
+    "bcrypt": "^6.0.0",
+    "cors": "^2.8.6",
+    "dotenv": "^17.4.2",
+    "express": "^5.2.1",
+    "express-rate-limit": "^8.6.0",
+    "helmet": "^8.3.0",
+    "jsonwebtoken": "^9.0.3",
+    "multer": "^2.2.0",
+    "swagger-jsdoc": "^6.3.0",
+    "swagger-ui-express": "^5.0.1",
+    "winston": "^3.19.0",
+    "zod": "^4.4.3"
+  },
+  "devDependencies": {
+    "@epi-manager/config": "workspace:*",
+    "@types/bcrypt": "^6.0.0",
+    "@types/cors": "^2.8.19",
+    "@types/express": "^5.0.6",
+    "@types/jsonwebtoken": "^9.0.10",
+    "@types/multer": "^2.2.0",
+    "@types/node": "^22.10.5",
+    "@types/swagger-jsdoc": "^6.0.4",
+    "@types/swagger-ui-express": "^4.1.8",
+    "tsx": "^4.23.1",
+    "typescript": "~5.7.3"
+  }
 }
