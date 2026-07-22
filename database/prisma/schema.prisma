@@ -1,11 +1,403 @@
-// Schema inicial - apenas datasource e generator.
-// As entidades de negocio (Empresa, Colaborador, EPI, Estoque, Entrega...)
-// serao adicionadas na etapa "Banco de dados" do roadmap.
-
 generator client {
   provider = "prisma-client-js"
 }
 
 datasource db {
   provider = "postgresql"
+}
+
+// ==========================================================================
+// RBAC / Usuarios
+// ==========================================================================
+
+enum UserRole {
+  ADMINISTRADOR
+  SUPERVISOR
+  ALMOXARIFE
+  TECNICO_SEGURANCA
+  RH
+  GESTOR
+  CONSULTA
+}
+
+model User {
+  id           String    @id @default(uuid())
+  email        String    @unique
+  passwordHash String    @map("password_hash")
+  role         UserRole
+  active       Boolean   @default(true)
+  lastLoginAt  DateTime? @map("last_login_at")
+  createdAt    DateTime  @default(now()) @map("created_at")
+  updatedAt    DateTime  @updatedAt @map("updated_at")
+
+  employeeId String?   @unique @map("employee_id")
+  employee   Employee? @relation(fields: [employeeId], references: [id])
+
+  refreshTokens   RefreshToken[]
+  auditLogs       AuditLog[]
+  stockMovements  StockMovement[]
+  deliveriesMade  Delivery[]
+
+  @@map("users")
+}
+
+model RefreshToken {
+  id        String    @id @default(uuid())
+  userId    String    @map("user_id")
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tokenHash String    @map("token_hash")
+  expiresAt DateTime  @map("expires_at")
+  revokedAt DateTime? @map("revoked_at")
+  createdAt DateTime  @default(now()) @map("created_at")
+
+  @@index([userId])
+  @@map("refresh_tokens")
+}
+
+// ==========================================================================
+// Empresas / Unidades / Setores / Cargos
+// ==========================================================================
+
+model Company {
+  id                String   @id @default(uuid())
+  name              String
+  tradeName         String?  @map("trade_name")
+  cnpj              String   @unique
+  responsibleName   String?  @map("responsible_name")
+  responsibleEmail  String?  @map("responsible_email")
+  createdAt         DateTime @default(now()) @map("created_at")
+  updatedAt         DateTime @updatedAt @map("updated_at")
+
+  businessUnits BusinessUnit[]
+
+  @@map("companies")
+}
+
+model BusinessUnit {
+  id        String   @id @default(uuid())
+  companyId String   @map("company_id")
+  company   Company  @relation(fields: [companyId], references: [id], onDelete: Restrict)
+  name      String
+  code      String
+  street    String?
+  number    String?
+  city      String?
+  state     String?
+  zipCode   String?  @map("zip_code")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  departments Department[]
+  employees   Employee[]
+  warehouses  Warehouse[]
+
+  @@unique([companyId, code])
+  @@map("business_units")
+}
+
+model Department {
+  id             String   @id @default(uuid())
+  businessUnitId String   @map("business_unit_id")
+  businessUnit   BusinessUnit @relation(fields: [businessUnitId], references: [id], onDelete: Restrict)
+  name           String
+  code           String
+  parentId       String?  @map("parent_id")
+  parent         Department?  @relation("DepartmentHierarchy", fields: [parentId], references: [id])
+  children       Department[] @relation("DepartmentHierarchy")
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+
+  employees Employee[]
+
+  @@unique([businessUnitId, code])
+  @@map("departments")
+}
+
+model JobRole {
+  id          String   @id @default(uuid())
+  name        String
+  description String?
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  employees    Employee[]
+  requiredEpis JobRoleRequiredEpi[]
+
+  @@map("job_roles")
+}
+
+model JobRoleRequiredEpi {
+  id         String   @id @default(uuid())
+  jobRoleId  String   @map("job_role_id")
+  jobRole    JobRole  @relation(fields: [jobRoleId], references: [id], onDelete: Cascade)
+  epiItemId  String   @map("epi_item_id")
+  epiItem    EpiItem  @relation(fields: [epiItemId], references: [id], onDelete: Cascade)
+  quantity   Int      @default(1)
+
+  @@unique([jobRoleId, epiItemId])
+  @@map("job_role_required_epis")
+}
+
+// ==========================================================================
+// Colaboradores
+// ==========================================================================
+
+enum EmployeeStatus {
+  ATIVO
+  INATIVO
+  BLOQUEADO
+  DESLIGADO
+}
+
+model Employee {
+  id             String   @id @default(uuid())
+  registration   String   @map("registration")
+  cpf            String   @unique
+  name           String
+  email          String?
+  phone          String?
+  photoUrl       String?  @map("photo_url")
+  status         EmployeeStatus @default(ATIVO)
+  admissionDate  DateTime? @map("admission_date")
+  terminationDate DateTime? @map("termination_date")
+  costCenter     String?  @map("cost_center")
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+  deletedAt      DateTime? @map("deleted_at")
+
+  companyId      String   @map("company_id")
+  businessUnitId String   @map("business_unit_id")
+  departmentId   String   @map("department_id")
+  jobRoleId      String   @map("job_role_id")
+  supervisorId   String?  @map("supervisor_id")
+
+  businessUnit BusinessUnit @relation(fields: [businessUnitId], references: [id], onDelete: Restrict)
+  department   Department   @relation(fields: [departmentId], references: [id], onDelete: Restrict)
+  jobRole      JobRole      @relation(fields: [jobRoleId], references: [id], onDelete: Restrict)
+  supervisor   Employee?    @relation("EmployeeSupervisor", fields: [supervisorId], references: [id])
+  subordinates Employee[]   @relation("EmployeeSupervisor")
+
+  user        User?
+  trainings   Training[]
+  deliveries  Delivery[]
+
+  @@unique([businessUnitId, registration])
+  @@map("employees")
+}
+
+model Training {
+  id             String    @id @default(uuid())
+  employeeId     String    @map("employee_id")
+  employee       Employee  @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  name           String
+  norm           String?
+  completedAt    DateTime  @map("completed_at")
+  expiresAt      DateTime? @map("expires_at")
+  certificateUrl String?   @map("certificate_url")
+  createdAt      DateTime  @default(now()) @map("created_at")
+
+  @@index([employeeId])
+  @@map("trainings")
+}
+
+// ==========================================================================
+// EPIs
+// ==========================================================================
+
+enum EpiControlType {
+  LOTE
+  PATRIMONIO
+  INDIVIDUAL
+}
+
+enum CaSituation {
+  VALIDO
+  VENCIDO
+  CANCELADO
+}
+
+model EpiItem {
+  id             String   @id @default(uuid())
+  name           String
+  internalCode   String   @unique @map("internal_code")
+  barcode        String?  @unique
+  category       String
+  manufacturer   String
+  model          String?
+  controlType    EpiControlType @map("control_type")
+  photoUrl       String?  @map("photo_url")
+  manualUrl      String?  @map("manual_url")
+  minQuantity    Int      @default(0) @map("min_quantity")
+  maxQuantity    Int?     @map("max_quantity")
+  unitValue      Decimal? @map("unit_value") @db.Decimal(10, 2)
+  usefulLifeDays Int?     @map("useful_life_days")
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+
+  cas                 EpiCA[]
+  stockItems          StockItem[]
+  deliveryItems       DeliveryItem[]
+  jobRoleRequirements JobRoleRequiredEpi[]
+
+  @@map("epi_items")
+}
+
+model EpiCA {
+  id        String      @id @default(uuid())
+  epiItemId String      @map("epi_item_id")
+  epiItem   EpiItem     @relation(fields: [epiItemId], references: [id], onDelete: Cascade)
+  number    String
+  issuedAt  DateTime    @map("issued_at")
+  expiresAt DateTime    @map("expires_at")
+  situation CaSituation @default(VALIDO)
+  createdAt DateTime    @default(now()) @map("created_at")
+
+  @@index([epiItemId])
+  @@map("epi_cas")
+}
+
+// ==========================================================================
+// Estoque
+// ==========================================================================
+
+enum StockMovementType {
+  ENTRADA
+  SAIDA
+  TRANSFERENCIA
+  AJUSTE
+  INVENTARIO
+}
+
+model Warehouse {
+  id             String   @id @default(uuid())
+  businessUnitId String   @map("business_unit_id")
+  businessUnit   BusinessUnit @relation(fields: [businessUnitId], references: [id], onDelete: Restrict)
+  name           String
+  code           String
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+
+  stockItems StockItem[]
+
+  @@unique([businessUnitId, code])
+  @@map("warehouses")
+}
+
+model StockItem {
+  id           String   @id @default(uuid())
+  epiItemId    String   @map("epi_item_id")
+  epiItem      EpiItem  @relation(fields: [epiItemId], references: [id], onDelete: Restrict)
+  warehouseId  String   @map("warehouse_id")
+  warehouse    Warehouse @relation(fields: [warehouseId], references: [id], onDelete: Restrict)
+  batchNumber  String?  @map("batch_number")
+  assetTag     String?  @map("asset_tag")
+  quantity     Int      @default(0)
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  movements     StockMovement[]
+  deliveryItems DeliveryItem[]
+
+  @@index([epiItemId, warehouseId])
+  @@map("stock_items")
+}
+
+model StockMovement {
+  id            String            @id @default(uuid())
+  stockItemId   String            @map("stock_item_id")
+  stockItem     StockItem         @relation(fields: [stockItemId], references: [id], onDelete: Restrict)
+  type          StockMovementType
+  quantity      Int
+  reason        String?
+  performedById String            @map("performed_by_id")
+  performedBy   User              @relation(fields: [performedById], references: [id], onDelete: Restrict)
+  createdAt     DateTime          @default(now()) @map("created_at")
+
+  @@index([stockItemId])
+  @@map("stock_movements")
+}
+
+// ==========================================================================
+// Entregas / Devolucoes
+// ==========================================================================
+
+enum ReturnCondition {
+  BOM
+  DANIFICADO
+  DESCARTADO
+}
+
+model Delivery {
+  id             String   @id @default(uuid())
+  employeeId     String   @map("employee_id")
+  employee       Employee @relation(fields: [employeeId], references: [id], onDelete: Restrict)
+  deliveredById  String   @map("delivered_by_id")
+  deliveredBy    User     @relation(fields: [deliveredById], references: [id], onDelete: Restrict)
+  deliveredAt    DateTime @default(now()) @map("delivered_at")
+  latitude       Decimal? @db.Decimal(9, 6)
+  longitude      Decimal? @db.Decimal(9, 6)
+  deviceInfo     String?  @map("device_info")
+  signatureUrl   String?  @map("signature_url")
+  receiptPdfUrl  String?  @map("receipt_pdf_url")
+  createdAt      DateTime @default(now()) @map("created_at")
+
+  items DeliveryItem[]
+
+  @@index([employeeId])
+  @@map("deliveries")
+}
+
+model DeliveryItem {
+  id                    String    @id @default(uuid())
+  deliveryId            String    @map("delivery_id")
+  delivery              Delivery  @relation(fields: [deliveryId], references: [id], onDelete: Cascade)
+  epiItemId             String    @map("epi_item_id")
+  epiItem               EpiItem   @relation(fields: [epiItemId], references: [id], onDelete: Restrict)
+  stockItemId           String?   @map("stock_item_id")
+  stockItem             StockItem? @relation(fields: [stockItemId], references: [id])
+  quantity              Int       @default(1)
+  expectedReplacementAt DateTime? @map("expected_replacement_at")
+  createdAt             DateTime  @default(now()) @map("created_at")
+
+  return EpiReturn?
+
+  @@index([deliveryId])
+  @@map("delivery_items")
+}
+
+model EpiReturn {
+  id                  String          @id @default(uuid())
+  deliveryItemId      String          @unique @map("delivery_item_id")
+  deliveryItem        DeliveryItem    @relation(fields: [deliveryItemId], references: [id], onDelete: Cascade)
+  condition           ReturnCondition
+  reason              String?
+  photoUrls           String[]        @map("photo_urls")
+  restockedToStockId  String?         @map("restocked_to_stock_id")
+  discarded           Boolean         @default(false)
+  returnedAt          DateTime        @default(now()) @map("returned_at")
+  createdAt           DateTime        @default(now()) @map("created_at")
+
+  @@map("epi_returns")
+}
+
+// ==========================================================================
+// Auditoria
+// ==========================================================================
+
+model AuditLog {
+  id        String   @id @default(uuid())
+  userId    String?  @map("user_id")
+  user      User?    @relation(fields: [userId], references: [id])
+  action    String
+  entity    String
+  entityId  String?  @map("entity_id")
+  before    Json?
+  after     Json?
+  ipAddress String?  @map("ip_address")
+  userAgent String?  @map("user_agent")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@index([entity, entityId])
+  @@index([createdAt])
+  @@map("audit_logs")
 }

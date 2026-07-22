@@ -12,7 +12,7 @@
   },
   "dependencies": {
     "@epi-manager/types": "workspace:*",
-    "@prisma/client": "^7.9.0",
+    "@epi-manager/database": "workspace:*",
     "bcrypt": "^6.0.0",
     "cors": "^2.8.6",
     "dotenv": "^17.4.2",
