@@ -1,11 +1,15 @@
+import cookieParser from "cookie-parser";
 import cors from "cors";
 import express from "express";
 import { rateLimit } from "express-rate-limit";
 import helmet from "helmet";
+import swaggerUi from "swagger-ui-express";
 import { healthRouter } from "./modules/health/health.routes.js";
+import { createAuthRouter } from "./modules/auth/http/auth.routes.js";
 import { env } from "./shared/env.js";
 import { errorHandler } from "./shared/middlewares/error-handler.js";
 import { notFoundHandler } from "./shared/middlewares/not-found.js";
+import { swaggerSpec } from "./shared/swagger.js";
 
 export function createApp() {
   const app = express();
@@ -18,6 +22,7 @@ export function createApp() {
     }),
   );
   app.use(express.json({ limit: "2mb" }));
+  app.use(cookieParser());
   app.use(
     rateLimit({
       windowMs: 15 * 60 * 1000,
@@ -27,7 +32,10 @@ export function createApp() {
     }),
   );
 
+  app.use("/docs", swaggerUi.serve, swaggerUi.setup(swaggerSpec));
+
   app.use(healthRouter);
+  app.use(createAuthRouter());
 
   app.use(notFoundHandler);
   app.use(errorHandler);
