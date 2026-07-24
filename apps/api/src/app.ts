@@ -6,6 +6,10 @@ import helmet from "helmet";
 import swaggerUi from "swagger-ui-express";
 import { healthRouter } from "./modules/health/health.routes.js";
 import { createAuthRouter } from "./modules/auth/http/auth.routes.js";
+import { createBusinessUnitRouter } from "./modules/organization/http/business-unit.routes.js";
+import { createCompanyRouter } from "./modules/organization/http/company.routes.js";
+import { createDepartmentRouter } from "./modules/organization/http/department.routes.js";
+import { createJobRoleRouter } from "./modules/organization/http/job-role.routes.js";
 import { env } from "./shared/env.js";
 import { errorHandler } from "./shared/middlewares/error-handler.js";
 import { notFoundHandler } from "./shared/middlewares/not-found.js";
@@ -36,6 +40,10 @@ export function createApp() {
 
   app.use(healthRouter);
   app.use(createAuthRouter());
+  app.use(createCompanyRouter());
+  app.use(createBusinessUnitRouter());
+  app.use(createDepartmentRouter());
+  app.use(createJobRoleRouter());
 
   app.use(notFoundHandler);
   app.use(errorHandler);
