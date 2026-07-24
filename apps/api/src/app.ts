@@ -4,8 +4,11 @@ import express from "express";
 import { rateLimit } from "express-rate-limit";
 import helmet from "helmet";
 import swaggerUi from "swagger-ui-express";
-import { healthRouter } from "./modules/health/health.routes.js";
 import { createAuthRouter } from "./modules/auth/http/auth.routes.js";
+import { createEmployeeRouter } from "./modules/employee/http/employee.routes.js";
+import { createEpiCaRouter } from "./modules/epi/http/epi-ca.routes.js";
+import { createEpiItemRouter } from "./modules/epi/http/epi-item.routes.js";
+import { healthRouter } from "./modules/health/health.routes.js";
 import { createBusinessUnitRouter } from "./modules/organization/http/business-unit.routes.js";
 import { createCompanyRouter } from "./modules/organization/http/company.routes.js";
 import { createDepartmentRouter } from "./modules/organization/http/department.routes.js";
@@ -44,6 +47,9 @@ export function createApp() {
   app.use(createBusinessUnitRouter());
   app.use(createDepartmentRouter());
   app.use(createJobRoleRouter());
+  app.use(createEpiItemRouter());
+  app.use(createEpiCaRouter());
+  app.use(createEmployeeRouter());
 
   app.use(notFoundHandler);
   app.use(errorHandler);
