@@ -1,43 +1,62 @@
-import { AppError } from "../../../shared/middlewares/error-handler.js";
+import { AppError } from "../../../shared/errors.js";
 import type { TokenService } from "../../../shared/security/token-service.js";
-import type { RefreshTokenRepository } from "../domain/refresh-token-repository.js";
-import type { UserRepository } from "../domain/user-repository.js";
+import type {
+  AuditRecorder,
+  ClientInfo,
+  IssuedSession,
+  RefreshTokenRepository,
+  UserRepository,
+} from "../domain/ports.js";
+import type { SessionIssuer } from "./session-issuer.js";
 
-interface RefreshOutput {
-  accessToken: string;
-  refreshToken: string;
-}
+/**
+ * Janela em que um token recem-rotacionado ainda pode reaparecer de forma legitima
+ * (ex.: duas abas renovando ao mesmo tempo). Fora dela, reapresentar um token ja usado
+ * indica roubo: todas as sessoes do usuario sao revogadas.
+ */
+export const REUSE_GRACE_MS = 30_000;
+
+const sessionExpired = () =>
+  new AppError("SESSAO_EXPIRADA", 401, "Sessao expirada. Entre novamente.");
 
 export class RefreshTokenUseCase {
   constructor(
     private readonly userRepository: UserRepository,
     private readonly refreshTokenRepository: RefreshTokenRepository,
     private readonly tokenService: TokenService,
+    private readonly sessionIssuer: SessionIssuer,
+    private readonly audit: AuditRecorder,
+    private readonly now: () => Date = () => new Date(),
   ) {}
 
-  async execute(refreshToken: string): Promise<RefreshOutput> {
-    const tokenHash = this.tokenService.hashRefreshToken(refreshToken);
-    const stored = await this.refreshTokenRepository.findValidByHash(tokenHash);
-    if (!stored) {
-      throw new AppError("Refresh token invalido ou expirado", 401);
+  async execute(refreshToken: string, client: ClientInfo): Promise<IssuedSession> {
+    const stored = await this.refreshTokenRepository.findByHash(
+      this.tokenService.hashRefreshToken(refreshToken),
+    );
+    if (!stored) throw sessionExpired();
+
+    if (stored.revokedAt) {
+      if (this.now().getTime() - stored.revokedAt.getTime() > REUSE_GRACE_MS) {
+        await this.refreshTokenRepository.revokeAllForUser(stored.userId);
+        await this.audit({
+          userId: stored.userId,
+          action: "SESSAO_REUSO_DETECTADO",
+          entity: "RefreshToken",
+          entityId: stored.id,
+          ...client,
+        });
+      }
+      throw sessionExpired();
     }
+
+    if (stored.expiresAt <= this.now()) throw sessionExpired();
+
+    // Rotacao atomica: so uma requisicao concorrente consegue revogar e seguir.
+    if (!(await this.refreshTokenRepository.revokeIfActive(stored.id))) throw sessionExpired();
 
     const user = await this.userRepository.findById(stored.userId);
-    if (!user || !user.active) {
-      throw new AppError("Usuario nao encontrado ou inativo", 401);
-    }
+    if (!user || !user.active) throw sessionExpired();
 
-    // Rotacao: revoga o token usado e emite um novo par de tokens.
-    await this.refreshTokenRepository.revoke(stored.id);
-
-    const accessToken = this.tokenService.signAccessToken({ sub: user.id, role: user.role });
-    const refresh = this.tokenService.generateRefreshToken();
-    await this.refreshTokenRepository.create({
-      userId: user.id,
-      tokenHash: refresh.tokenHash,
-      expiresAt: refresh.expiresAt,
-    });
-
-    return { accessToken, refreshToken: refresh.token };
+    return this.sessionIssuer.issue(user);
   }
 }

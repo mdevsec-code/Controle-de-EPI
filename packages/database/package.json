@@ -2,18 +2,35 @@
   "name": "@epi-manager/database",
   "private": true,
   "version": "0.1.0",
-  "description": "Prisma client singleton compartilhado (driver adapter pg)",
+  "description": "Prisma client singleton compartilhado (driver adapter pg) e seed de desenvolvimento",
   "type": "module",
-  "main": "./src/client.ts",
-  "types": "./src/client.ts",
+  "main": "./dist/client.js",
+  "types": "./dist/client.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/client.d.ts",
+      "default": "./dist/client.js"
+    }
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "lint": "eslint .",
+    "seed": "tsx seed/seed.ts",
+    "typecheck": "tsc -p tsconfig.seed.json"
+  },
   "dependencies": {
     "@prisma/adapter-pg": "^7.9.0",
     "@prisma/client": "^7.9.0",
     "pg": "^8.22.0"
   },
   "devDependencies": {
+    "@epi-manager/config": "workspace:*",
+    "@types/bcrypt": "^6.0.0",
     "@types/node": "^22.10.5",
     "@types/pg": "^8.20.0",
+    "bcrypt": "^6.0.0",
+    "dotenv": "^17.4.2",
+    "tsx": "^4.23.1",
     "typescript": "~5.7.3"
   }
 }

@@ -1,6 +1,0 @@
-{
-  "name": "@epi-manager/ui",
-  "private": true,
-  "version": "0.1.0",
-  "description": "Design system compartilhado (shadcn/ui customizado + tokens da paleta corporativa)"
-}

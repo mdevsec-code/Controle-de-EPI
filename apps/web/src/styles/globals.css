@@ -1,77 +1,141 @@
 @import "tailwindcss";
 
-@custom-variant dark (&:where(.dark, .dark *));
-
+/*
+ * Identidade ENGENOVA — fiel ao prototipo legado (legado/index.html e capturas em legado/*.png):
+ * laranjas #FF8A3D / #EE5A24 / #D8481A, tinta #1B1B1F, fundo #F4F4F6, cards brancos com raio 16–22 px,
+ * Sora nos titulos/botoes, Inter no texto e JetBrains Mono no numero do CA.
+ *
+ * Acessibilidade: o cinza de texto secundario do legado (#8E8E96) fica so em icones/bordas; textos usam
+ * #6B6B73 (contraste AA). Links/textos laranja pequenos usam primary-700.
+ */
 @theme {
   --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-display: "Sora", "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, monospace;
 
-  /* Azul corporativo (marca / acoes primarias) */
-  --color-primary-50: #eff6ff;
-  --color-primary-100: #dbeafe;
-  --color-primary-200: #bfdbfe;
-  --color-primary-300: #93c5fd;
-  --color-primary-400: #60a5fa;
-  --color-primary-500: #2563eb;
-  --color-primary-600: #1d4ed8;
-  --color-primary-700: #1e40af;
-  --color-primary-800: #1e3a8a;
-  --color-primary-900: #172554;
+  --color-primary-50: #fff7f2;
+  --color-primary-100: #fff0e6;
+  --color-primary-200: #ffd8b8;
+  --color-primary-300: #ffb27a;
+  --color-primary-400: #ff8a3d;
+  --color-primary-500: #ee5a24;
+  --color-primary-600: #d8481a;
+  --color-primary-700: #c4410f;
 
-  /* Neutros (fundo/superficie/texto) */
   --color-neutral-0: #ffffff;
-  --color-neutral-50: #f8fafc;
-  --color-neutral-100: #f1f5f9;
-  --color-neutral-200: #e2e8f0;
-  --color-neutral-300: #cbd5e1;
-  --color-neutral-400: #94a3b8;
-  --color-neutral-500: #64748b;
-  --color-neutral-600: #475569;
-  --color-neutral-700: #334155;
-  --color-neutral-800: #1e293b;
-  --color-neutral-900: #0f172a;
+  --color-neutral-50: #f4f4f6;
+  --color-neutral-100: #ececee;
+  --color-neutral-150: #f2f2f5;
+  --color-neutral-200: #e4e4e8;
+  --color-neutral-300: #d4d4d8;
+  --color-neutral-400: #8e8e96;
+  --color-neutral-500: #6b6b73;
+  --color-neutral-600: #4a4a52;
+  --color-neutral-700: #34343a;
+  --color-neutral-800: #26262b;
+  --color-neutral-900: #1b1b1f;
 
-  /* Estados */
-  --color-success-50: #ecfdf5;
-  --color-success-500: #16a34a;
-  --color-success-600: #15803d;
+  --color-success-50: #e8f7ef;
+  --color-success-600: #1e8f5e;
+  --color-success-700: #17734b;
 
-  --color-warning-50: #fffbeb;
-  --color-warning-500: #f59e0b;
-  --color-warning-600: #d97706;
+  --color-warning-50: #fff8e6;
+  --color-warning-600: #b45309;
+  --color-warning-700: #92400e;
 
-  --color-danger-50: #fef2f2;
-  --color-danger-500: #dc2626;
-  --color-danger-600: #b91c1c;
+  --color-danger-50: #fdecec;
+  --color-danger-500: #e24c4c;
+  --color-danger-600: #c53030;
+  --color-danger-700: #9b2424;
 
-  --radius-sm: 6px;
-  --radius-md: 10px;
-  --radius-lg: 16px;
+  /* Raios e sombras do legado. Nomes proprios para nao sobrescrever rounded-sm/md/lg do Tailwind. */
+  --radius-control: 14px;
+  --radius-card: 20px;
+  --radius-sheet: 28px;
+
+  --shadow-card: 0 2px 10px rgb(20 20 30 / 0.05), 0 1px 2px rgb(20 20 30 / 0.04);
+  --shadow-pop: 0 18px 40px rgb(20 20 30 / 0.16);
+  --shadow-cta: 0 10px 20px -8px rgb(238 90 36 / 0.55);
+
+  --animate-shimmer: shimmer 1.6s linear infinite;
+  --animate-scan: scan 2s ease-in-out infinite;
+
+  @keyframes shimmer {
+    from {
+      background-position: -200% 0;
+    }
+    to {
+      background-position: 200% 0;
+    }
+  }
+  /* Laser do scanner (mesmo movimento do prototipo). */
+  @keyframes scan {
+    0%,
+    100% {
+      transform: translateY(0);
+    }
+    50% {
+      transform: translateY(var(--scan-distance, 210px));
+    }
+  }
 }
 
-:root {
-  --background: var(--color-neutral-50);
-  --surface: var(--color-neutral-0);
-  --foreground: var(--color-neutral-900);
-  --border: var(--color-neutral-200);
-  --muted-foreground: var(--color-neutral-500);
+html {
+  -webkit-text-size-adjust: 100%;
 }
 
-.dark {
-  --background: var(--color-neutral-900);
-  --surface: var(--color-neutral-800);
-  --foreground: var(--color-neutral-50);
-  --border: var(--color-neutral-700);
-  --muted-foreground: var(--color-neutral-400);
-}
-
-html,
 body {
-  overflow-x: hidden;
-}
-
-body {
-  background-color: var(--background);
-  color: var(--foreground);
+  background-color: var(--color-neutral-50);
+  color: var(--color-neutral-900);
   font-family: var(--font-sans);
   -webkit-font-smoothing: antialiased;
+  -webkit-tap-highlight-color: transparent;
+}
+
+h1,
+h2,
+h3 {
+  font-family: var(--font-display);
+}
+
+/* Foco visivel consistente para navegacao por teclado. */
+:focus-visible {
+  outline: 3px solid var(--color-primary-400);
+  outline-offset: 2px;
+}
+
+@utility skeleton {
+  background-image: linear-gradient(
+    90deg,
+    var(--color-neutral-100) 0%,
+    var(--color-neutral-50) 40%,
+    var(--color-neutral-100) 80%
+  );
+  background-size: 200% 100%;
+  animation: var(--animate-shimmer);
+}
+
+@utility tabular {
+  font-variant-numeric: tabular-nums;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* Comprovante: imprime so a area do documento. */
+@media print {
+  .no-print {
+    display: none !important;
+  }
+  body {
+    background: white;
+  }
 }

@@ -1,14 +1,27 @@
 import crypto from "node:crypto";
 import jwt from "jsonwebtoken";
+import { USER_ROLES, type UserRole } from "@epi-manager/contracts";
+import { z } from "zod";
 import { env } from "../env.js";
 
-const ACCESS_TOKEN_TTL = "15m";
-const REFRESH_TOKEN_TTL_MS = 7 * 24 * 60 * 60 * 1000; // 7 dias
+export const ACCESS_TOKEN_TTL_SECONDS = 15 * 60;
+export const REFRESH_TOKEN_TTL_MS = 7 * 24 * 60 * 60 * 1000;
 
-export interface AccessTokenPayload {
+const ISSUER = "epi-manager-api";
+const AUDIENCE = "epi-manager-web";
+
+export interface AccessTokenClaims {
   sub: string;
-  role: string;
+  role: UserRole;
+  /** tokenVersion do usuario no momento da emissao. */
+  ver: number;
 }
+
+const claimsSchema = z.object({
+  sub: z.string().min(1),
+  role: z.enum(USER_ROLES),
+  ver: z.number().int().min(0),
+});
 
 export interface RefreshTokenData {
   token: string;
@@ -17,8 +30,9 @@ export interface RefreshTokenData {
 }
 
 export interface TokenService {
-  signAccessToken(payload: AccessTokenPayload): string;
-  verifyAccessToken(token: string): AccessTokenPayload;
+  signAccessToken(claims: AccessTokenClaims): string;
+  /** Lanca se o token for invalido, expirado ou com claims malformadas. */
+  verifyAccessToken(token: string): AccessTokenClaims;
   generateRefreshToken(): RefreshTokenData;
   hashRefreshToken(token: string): string;
 }
@@ -28,16 +42,26 @@ function hashRefreshToken(token: string): string {
 }
 
 export const jwtTokenService: TokenService = {
-  signAccessToken(payload) {
-    return jwt.sign(payload, env.JWT_SECRET, { expiresIn: ACCESS_TOKEN_TTL });
+  signAccessToken(claims) {
+    return jwt.sign(claims, env.JWT_SECRET, {
+      algorithm: "HS256",
+      expiresIn: ACCESS_TOKEN_TTL_SECONDS,
+      issuer: ISSUER,
+      audience: AUDIENCE,
+    });
   },
 
   verifyAccessToken(token) {
-    return jwt.verify(token, env.JWT_SECRET) as AccessTokenPayload;
+    const payload = jwt.verify(token, env.JWT_SECRET, {
+      algorithms: ["HS256"],
+      issuer: ISSUER,
+      audience: AUDIENCE,
+    });
+    return claimsSchema.parse(payload);
   },
 
   generateRefreshToken() {
-    const token = crypto.randomBytes(64).toString("hex");
+    const token = crypto.randomBytes(48).toString("base64url");
     return {
       token,
       tokenHash: hashRefreshToken(token),

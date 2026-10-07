@@ -1,0 +1,30 @@
+{
+  "name": "@epi-manager/contracts",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Contratos compartilhados entre api e web: enums, schemas Zod, DTOs e codigos de erro",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "dev": "tsc -p tsconfig.json --watch --preserveWatchOutput",
+    "lint": "eslint .",
+    "test": "vitest run",
+    "typecheck": "tsc -p tsconfig.json --noEmit"
+  },
+  "dependencies": {
+    "zod": "^4.4.3"
+  },
+  "devDependencies": {
+    "@epi-manager/config": "workspace:*",
+    "typescript": "~5.7.3",
+    "vitest": "^4.1.10"
+  }
+}

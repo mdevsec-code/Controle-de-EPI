@@ -1,53 +1,87 @@
-import { AppError } from "../../../shared/middlewares/error-handler.js";
+import type { LoginRequest } from "@epi-manager/contracts";
+import { AppError } from "../../../shared/errors.js";
 import type { PasswordHasher } from "../../../shared/security/password-hasher.js";
-import type { TokenService } from "../../../shared/security/token-service.js";
-import type { RefreshTokenRepository } from "../domain/refresh-token-repository.js";
-import type { UserRepository } from "../domain/user-repository.js";
+import type { AuditRecorder, ClientInfo, IssuedSession, UserRepository } from "../domain/ports.js";
+import type { SessionIssuer } from "./session-issuer.js";
 
-interface LoginInput {
-  email: string;
-  password: string;
-}
+/** Falhas consecutivas que disparam o bloqueio temporario da conta. */
+export const MAX_FAILED_LOGINS = 5;
+export const LOCK_DURATION_MS = 15 * 60 * 1000;
 
-interface LoginOutput {
-  accessToken: string;
-  refreshToken: string;
-  user: { id: string; email: string; role: string };
-}
+const invalidCredentials = () =>
+  new AppError("CREDENCIAIS_INVALIDAS", 401, "E-mail ou senha incorretos.");
 
 export class LoginUseCase {
   constructor(
     private readonly userRepository: UserRepository,
-    private readonly refreshTokenRepository: RefreshTokenRepository,
     private readonly passwordHasher: PasswordHasher,
-    private readonly tokenService: TokenService,
+    private readonly sessionIssuer: SessionIssuer,
+    private readonly audit: AuditRecorder,
+    private readonly dummyHash: () => Promise<string>,
+    private readonly now: () => Date = () => new Date(),
   ) {}
 
-  async execute({ email, password }: LoginInput): Promise<LoginOutput> {
+  async execute({ email, password }: LoginRequest, client: ClientInfo): Promise<IssuedSession> {
     const user = await this.userRepository.findByEmail(email);
-    if (!user || !user.active) {
-      throw new AppError("Credenciais invalidas", 401);
+
+    if (!user) {
+      // Mesmo custo de uma senha errada: nao revela se o e-mail existe.
+      await this.passwordHasher.compare(password, await this.dummyHash());
+      await this.audit({
+        userId: null,
+        action: "LOGIN_FALHA",
+        entity: "User",
+        after: { email },
+        ...client,
+      });
+      throw invalidCredentials();
+    }
+
+    if (user.lockedUntil && user.lockedUntil > this.now()) {
+      await this.audit({
+        userId: user.id,
+        action: "LOGIN_BLOQUEADO",
+        entity: "User",
+        entityId: user.id,
+        ...client,
+      });
+      throw new AppError(
+        "CONTA_BLOQUEADA",
+        423,
+        "Conta temporariamente bloqueada por excesso de tentativas. Tente novamente em alguns minutos.",
+        { lockedUntil: user.lockedUntil.toISOString() },
+      );
     }
 
     const passwordMatches = await this.passwordHasher.compare(password, user.passwordHash);
-    if (!passwordMatches) {
-      throw new AppError("Credenciais invalidas", 401);
+    if (!passwordMatches || !user.active) {
+      const failures = await this.userRepository.incrementFailedLogins(user.id);
+      if (failures >= MAX_FAILED_LOGINS) {
+        await this.userRepository.lockUntil(
+          user.id,
+          new Date(this.now().getTime() + LOCK_DURATION_MS),
+        );
+      }
+      await this.audit({
+        userId: user.id,
+        action: "LOGIN_FALHA",
+        entity: "User",
+        entityId: user.id,
+        after: { failures, inactive: !user.active },
+        ...client,
+      });
+      throw invalidCredentials();
     }
 
-    const accessToken = this.tokenService.signAccessToken({ sub: user.id, role: user.role });
-    const refresh = this.tokenService.generateRefreshToken();
-
-    await this.refreshTokenRepository.create({
+    await this.userRepository.markLoginSuccess(user.id);
+    const session = await this.sessionIssuer.issue(user);
+    await this.audit({
       userId: user.id,
-      tokenHash: refresh.tokenHash,
-      expiresAt: refresh.expiresAt,
+      action: "LOGIN_SUCESSO",
+      entity: "User",
+      entityId: user.id,
+      ...client,
     });
-    await this.userRepository.touchLastLogin(user.id);
-
-    return {
-      accessToken,
-      refreshToken: refresh.token,
-      user: { id: user.id, email: user.email, role: user.role },
-    };
+    return session;
   }
 }

@@ -9,7 +9,9 @@
     "declaration": true,
     "emitDeclarationOnly": true,
     "outDir": "./.tsbuild",
-    "skipLibCheck": true
+    "skipLibCheck": true,
+    "resolveJsonModule": true,
+    "types": ["node"]
   },
-  "include": ["vite.config.ts"]
+  "include": ["vite.config.ts", "package.json"]
 }
