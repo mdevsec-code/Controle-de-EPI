@@ -7,45 +7,56 @@ datasource db {
 }
 
 // ==========================================================================
-// RBAC / Usuarios
+// Usuarios (quem opera o sistema)
 // ==========================================================================
 
 enum UserRole {
-  ADMINISTRADOR
-  SUPERVISOR
-  ALMOXARIFE
-  TECNICO_SEGURANCA
-  RH
-  GESTOR
-  CONSULTA
+  ADMIN
+  ALMOXARIFADO
 }
 
 model User {
-  id           String    @id @default(uuid())
-  email        String    @unique
-  passwordHash String    @map("password_hash")
-  role         UserRole
-  active       Boolean   @default(true)
-  lastLoginAt  DateTime? @map("last_login_at")
-  createdAt    DateTime  @default(now()) @map("created_at")
-  updatedAt    DateTime  @updatedAt @map("updated_at")
+  id                 String    @id @default(uuid())
+  name               String
+  email              String    @unique
+  passwordHash       String    @map("password_hash")
+  role               UserRole
+  active             Boolean   @default(true)
+  // Incrementado ao desativar o usuario, trocar perfil ou senha: invalida access tokens emitidos.
+  tokenVersion       Int       @default(0) @map("token_version")
+  mustChangePassword Boolean   @default(false) @map("must_change_password")
+  failedLoginCount   Int       @default(0) @map("failed_login_count")
+  lockedUntil        DateTime? @map("locked_until")
+  lastLoginAt        DateTime? @map("last_login_at")
+  createdAt          DateTime  @default(now()) @map("created_at")
+  updatedAt          DateTime  @updatedAt @map("updated_at")
 
-  employeeId String?   @unique @map("employee_id")
-  employee   Employee? @relation(fields: [employeeId], references: [id])
-
+  warehouses      UserWarehouse[]
   refreshTokens   RefreshToken[]
   auditLogs       AuditLog[]
   stockMovements  StockMovement[]
   deliveriesMade  Delivery[]
+  returnsReceived EpiReturn[]
 
   @@map("users")
+}
+
+model UserWarehouse {
+  userId      String    @map("user_id")
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  warehouseId String    @map("warehouse_id")
+  warehouse   Warehouse @relation(fields: [warehouseId], references: [id], onDelete: Cascade)
+
+  @@id([userId, warehouseId])
+  @@index([warehouseId])
+  @@map("user_warehouses")
 }
 
 model RefreshToken {
   id        String    @id @default(uuid())
   userId    String    @map("user_id")
   user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  tokenHash String    @map("token_hash")
+  tokenHash String    @unique @map("token_hash")
   expiresAt DateTime  @map("expires_at")
   revokedAt DateTime? @map("revoked_at")
   createdAt DateTime  @default(now()) @map("created_at")
@@ -59,14 +70,14 @@ model RefreshToken {
 // ==========================================================================
 
 model Company {
-  id                String   @id @default(uuid())
-  name              String
-  tradeName         String?  @map("trade_name")
-  cnpj              String   @unique
-  responsibleName   String?  @map("responsible_name")
-  responsibleEmail  String?  @map("responsible_email")
-  createdAt         DateTime @default(now()) @map("created_at")
-  updatedAt         DateTime @updatedAt @map("updated_at")
+  id               String   @id @default(uuid())
+  name             String
+  tradeName        String?  @map("trade_name")
+  cnpj             String   @unique
+  responsibleName  String?  @map("responsible_name")
+  responsibleEmail String?  @map("responsible_email")
+  createdAt        DateTime @default(now()) @map("created_at")
+  updatedAt        DateTime @updatedAt @map("updated_at")
 
   businessUnits BusinessUnit[]
 
@@ -96,16 +107,16 @@ model BusinessUnit {
 }
 
 model Department {
-  id             String   @id @default(uuid())
-  businessUnitId String   @map("business_unit_id")
+  id             String       @id @default(uuid())
+  businessUnitId String       @map("business_unit_id")
   businessUnit   BusinessUnit @relation(fields: [businessUnitId], references: [id], onDelete: Restrict)
   name           String
   code           String
-  parentId       String?  @map("parent_id")
+  parentId       String?      @map("parent_id")
   parent         Department?  @relation("DepartmentHierarchy", fields: [parentId], references: [id])
   children       Department[] @relation("DepartmentHierarchy")
-  createdAt      DateTime @default(now()) @map("created_at")
-  updatedAt      DateTime @updatedAt @map("updated_at")
+  createdAt      DateTime     @default(now()) @map("created_at")
+  updatedAt      DateTime     @updatedAt @map("updated_at")
 
   employees Employee[]
 
@@ -127,19 +138,19 @@ model JobRole {
 }
 
 model JobRoleRequiredEpi {
-  id         String   @id @default(uuid())
-  jobRoleId  String   @map("job_role_id")
-  jobRole    JobRole  @relation(fields: [jobRoleId], references: [id], onDelete: Cascade)
-  epiItemId  String   @map("epi_item_id")
-  epiItem    EpiItem  @relation(fields: [epiItemId], references: [id], onDelete: Cascade)
-  quantity   Int      @default(1)
+  id        String  @id @default(uuid())
+  jobRoleId String  @map("job_role_id")
+  jobRole   JobRole @relation(fields: [jobRoleId], references: [id], onDelete: Cascade)
+  epiItemId String  @map("epi_item_id")
+  epiItem   EpiItem @relation(fields: [epiItemId], references: [id], onDelete: Cascade)
+  quantity  Int     @default(1)
 
   @@unique([jobRoleId, epiItemId])
   @@map("job_role_required_epis")
 }
 
 // ==========================================================================
-// Colaboradores
+// Colaboradores (pessoas que recebem EPI; nao fazem login nesta fase)
 // ==========================================================================
 
 enum EmployeeStatus {
@@ -150,26 +161,26 @@ enum EmployeeStatus {
 }
 
 model Employee {
-  id             String   @id @default(uuid())
-  registration   String   @map("registration")
-  cpf            String   @unique
-  name           String
-  email          String?
-  phone          String?
-  photoUrl       String?  @map("photo_url")
-  status         EmployeeStatus @default(ATIVO)
-  admissionDate  DateTime? @map("admission_date")
-  terminationDate DateTime? @map("termination_date")
-  costCenter     String?  @map("cost_center")
-  createdAt      DateTime @default(now()) @map("created_at")
-  updatedAt      DateTime @updatedAt @map("updated_at")
-  deletedAt      DateTime? @map("deleted_at")
+  id              String         @id @default(uuid())
+  registration    String
+  cpf             String         @unique
+  name            String
+  email           String?
+  phone           String?
+  photoUrl        String?        @map("photo_url")
+  status          EmployeeStatus @default(ATIVO)
+  // Conteudo do QR Code do cracha: valor aleatorio e opaco, reemitivel (nunca CPF/ID/matricula).
+  badgeCode       String         @unique @map("badge_code")
+  admissionDate   DateTime?      @map("admission_date")
+  terminationDate DateTime?      @map("termination_date")
+  costCenter      String?        @map("cost_center")
+  createdAt       DateTime       @default(now()) @map("created_at")
+  updatedAt       DateTime       @updatedAt @map("updated_at")
 
-  companyId      String   @map("company_id")
-  businessUnitId String   @map("business_unit_id")
-  departmentId   String   @map("department_id")
-  jobRoleId      String   @map("job_role_id")
-  supervisorId   String?  @map("supervisor_id")
+  businessUnitId String  @map("business_unit_id")
+  departmentId   String  @map("department_id")
+  jobRoleId      String  @map("job_role_id")
+  supervisorId   String? @map("supervisor_id")
 
   businessUnit BusinessUnit @relation(fields: [businessUnitId], references: [id], onDelete: Restrict)
   department   Department   @relation(fields: [departmentId], references: [id], onDelete: Restrict)
@@ -177,149 +188,234 @@ model Employee {
   supervisor   Employee?    @relation("EmployeeSupervisor", fields: [supervisorId], references: [id])
   subordinates Employee[]   @relation("EmployeeSupervisor")
 
-  user        User?
-  trainings   Training[]
-  deliveries  Delivery[]
+  deliveries Delivery[]
 
   @@unique([businessUnitId, registration])
+  @@index([name])
+  @@index([registration])
   @@map("employees")
-}
-
-model Training {
-  id             String    @id @default(uuid())
-  employeeId     String    @map("employee_id")
-  employee       Employee  @relation(fields: [employeeId], references: [id], onDelete: Cascade)
-  name           String
-  norm           String?
-  completedAt    DateTime  @map("completed_at")
-  expiresAt      DateTime? @map("expires_at")
-  certificateUrl String?   @map("certificate_url")
-  createdAt      DateTime  @default(now()) @map("created_at")
-
-  @@index([employeeId])
-  @@map("trainings")
 }
 
 // ==========================================================================
 // EPIs
 // ==========================================================================
 
-enum EpiControlType {
-  LOTE
-  PATRIMONIO
-  INDIVIDUAL
-}
+model EpiCategory {
+  id        String   @id @default(uuid())
+  name      String   @unique
+  createdAt DateTime @default(now()) @map("created_at")
 
-enum CaSituation {
-  VALIDO
-  VENCIDO
-  CANCELADO
+  epiItems EpiItem[]
+
+  @@map("epi_categories")
 }
 
 model EpiItem {
-  id             String   @id @default(uuid())
+  id             String      @id @default(uuid())
   name           String
-  internalCode   String   @unique @map("internal_code")
-  barcode        String?  @unique
-  category       String
+  internalCode   String      @unique @map("internal_code")
+  barcode        String?     @unique
+  categoryId     String      @map("category_id")
+  category       EpiCategory @relation(fields: [categoryId], references: [id], onDelete: Restrict)
   manufacturer   String
   model          String?
-  controlType    EpiControlType @map("control_type")
-  photoUrl       String?  @map("photo_url")
-  manualUrl      String?  @map("manual_url")
-  minQuantity    Int      @default(0) @map("min_quantity")
-  maxQuantity    Int?     @map("max_quantity")
-  unitValue      Decimal? @map("unit_value") @db.Decimal(10, 2)
-  usefulLifeDays Int?     @map("useful_life_days")
-  createdAt      DateTime @default(now()) @map("created_at")
-  updatedAt      DateTime @updatedAt @map("updated_at")
+  photoUrl       String?     @map("photo_url")
+  manualUrl      String?     @map("manual_url")
+  minQuantity    Int         @default(0) @map("min_quantity")
+  unitPriceCents Int?        @map("unit_price_cents")
+  usefulLifeDays Int?        @map("useful_life_days")
+  active         Boolean     @default(true)
+  createdAt      DateTime    @default(now()) @map("created_at")
+  updatedAt      DateTime    @updatedAt @map("updated_at")
 
   cas                 EpiCA[]
   stockItems          StockItem[]
   deliveryItems       DeliveryItem[]
   jobRoleRequirements JobRoleRequiredEpi[]
 
+  @@index([name])
   @@map("epi_items")
 }
 
 model EpiCA {
-  id        String      @id @default(uuid())
-  epiItemId String      @map("epi_item_id")
-  epiItem   EpiItem     @relation(fields: [epiItemId], references: [id], onDelete: Cascade)
-  number    String
-  issuedAt  DateTime    @map("issued_at")
-  expiresAt DateTime    @map("expires_at")
-  situation CaSituation @default(VALIDO)
-  createdAt DateTime    @default(now()) @map("created_at")
+  id          String    @id @default(uuid())
+  epiItemId   String    @map("epi_item_id")
+  epiItem     EpiItem   @relation(fields: [epiItemId], references: [id], onDelete: Cascade)
+  number      String
+  issuedAt    DateTime  @map("issued_at")
+  // Validade derivada de expiresAt; so o cancelamento e gravado.
+  expiresAt   DateTime  @map("expires_at")
+  cancelledAt DateTime? @map("cancelled_at")
+  createdAt   DateTime  @default(now()) @map("created_at")
 
   @@index([epiItemId])
   @@map("epi_cas")
 }
 
 // ==========================================================================
-// Estoque
+// Estoque: saldo materializado (StockItem.quantity, CHECK >= 0 na migration)
+// + razao de movimentacoes (StockMovement). Saldo so muda junto com movimento.
 // ==========================================================================
 
 enum StockMovementType {
   ENTRADA
   SAIDA
-  TRANSFERENCIA
+  ENTREGA
+  DEVOLUCAO
   AJUSTE
-  INVENTARIO
+  PERDA
+  AVARIA
 }
 
 model Warehouse {
-  id             String   @id @default(uuid())
-  businessUnitId String   @map("business_unit_id")
+  id             String       @id @default(uuid())
+  businessUnitId String       @map("business_unit_id")
   businessUnit   BusinessUnit @relation(fields: [businessUnitId], references: [id], onDelete: Restrict)
   name           String
   code           String
-  createdAt      DateTime @default(now()) @map("created_at")
-  updatedAt      DateTime @updatedAt @map("updated_at")
+  createdAt      DateTime     @default(now()) @map("created_at")
+  updatedAt      DateTime     @updatedAt @map("updated_at")
 
+  users      UserWarehouse[]
   stockItems StockItem[]
+  deliveries Delivery[]
 
   @@unique([businessUnitId, code])
   @@map("warehouses")
 }
 
 model StockItem {
-  id           String   @id @default(uuid())
-  epiItemId    String   @map("epi_item_id")
-  epiItem      EpiItem  @relation(fields: [epiItemId], references: [id], onDelete: Restrict)
-  warehouseId  String   @map("warehouse_id")
-  warehouse    Warehouse @relation(fields: [warehouseId], references: [id], onDelete: Restrict)
-  batchNumber  String?  @map("batch_number")
-  assetTag     String?  @map("asset_tag")
-  quantity     Int      @default(0)
-  createdAt    DateTime @default(now()) @map("created_at")
-  updatedAt    DateTime @updatedAt @map("updated_at")
+  id          String    @id @default(uuid())
+  warehouseId String    @map("warehouse_id")
+  warehouse   Warehouse @relation(fields: [warehouseId], references: [id], onDelete: Restrict)
+  epiItemId   String    @map("epi_item_id")
+  epiItem     EpiItem   @relation(fields: [epiItemId], references: [id], onDelete: Restrict)
+  // String vazia = EPI sem grade / sem lote (evita NULL em chave unica).
+  size        String    @default("")
+  batchNumber String    @default("") @map("batch_number")
+  // Onde o item fica guardado no almoxarifado (ex.: "Corredor A · Prateleira 2"); vazio = nao definido.
+  location    String    @default("")
+  quantity    Int       @default(0)
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
 
   movements     StockMovement[]
   deliveryItems DeliveryItem[]
+  returns       EpiReturn[]
 
-  @@index([epiItemId, warehouseId])
+  @@unique([warehouseId, epiItemId, size, batchNumber])
+  @@index([epiItemId])
+  @@index([warehouseId, location])
   @@map("stock_items")
 }
 
 model StockMovement {
-  id            String            @id @default(uuid())
-  stockItemId   String            @map("stock_item_id")
-  stockItem     StockItem         @relation(fields: [stockItemId], references: [id], onDelete: Restrict)
-  type          StockMovementType
-  quantity      Int
-  reason        String?
-  performedById String            @map("performed_by_id")
-  performedBy   User              @relation(fields: [performedById], references: [id], onDelete: Restrict)
-  createdAt     DateTime          @default(now()) @map("created_at")
+  id             String            @id @default(uuid())
+  stockItemId    String            @map("stock_item_id")
+  stockItem      StockItem         @relation(fields: [stockItemId], references: [id], onDelete: Restrict)
+  type           StockMovementType
+  // Variacao assinada do saldo (entrada positiva, saida negativa).
+  delta          Int
+  balanceBefore  Int               @map("balance_before")
+  balanceAfter   Int               @map("balance_after")
+  reason         String?
+  performedById  String            @map("performed_by_id")
+  performedBy    User              @relation(fields: [performedById], references: [id], onDelete: Restrict)
+  deliveryItemId String?           @map("delivery_item_id")
+  deliveryItem   DeliveryItem?     @relation(fields: [deliveryItemId], references: [id], onDelete: Restrict)
+  returnId       String?           @map("return_id")
+  epiReturn      EpiReturn?        @relation(fields: [returnId], references: [id], onDelete: Restrict)
+  createdAt      DateTime          @default(now()) @map("created_at")
 
-  @@index([stockItemId])
+  @@index([stockItemId, createdAt])
+  @@index([createdAt])
   @@map("stock_movements")
 }
 
 // ==========================================================================
-// Entregas / Devolucoes
+// Entregas (operacao imutavel apos registrada) / Devolucoes
 // ==========================================================================
+
+enum DeliveryStatus {
+  CONCLUIDA
+  CANCELADA
+}
+
+enum DeliveryReason {
+  DESGASTE
+  DANO
+  ROTINA
+  ATIVIDADE_ESPECIAL
+  PERDA
+  EXTRAVIO
+  NOVO_COLABORADOR
+  OUTRO
+}
+
+model Delivery {
+  id             String         @id @default(uuid())
+  // Numero sequencial legivel para comprovante ("Entrega no 000123").
+  number         Int            @unique @default(autoincrement())
+  idempotencyKey String         @unique @map("idempotency_key")
+  status         DeliveryStatus @default(CONCLUIDA)
+  reason         DeliveryReason
+  reasonDetail   String?        @map("reason_detail")
+  notes          String?
+  employeeId     String         @map("employee_id")
+  employee       Employee       @relation(fields: [employeeId], references: [id], onDelete: Restrict)
+  warehouseId    String         @map("warehouse_id")
+  warehouse      Warehouse      @relation(fields: [warehouseId], references: [id], onDelete: Restrict)
+  deliveredById  String         @map("delivered_by_id")
+  deliveredBy    User           @relation(fields: [deliveredById], references: [id], onDelete: Restrict)
+  deliveredAt    DateTime       @default(now()) @map("delivered_at")
+  createdAt      DateTime       @default(now()) @map("created_at")
+
+  items     DeliveryItem[]
+  signature DeliverySignature?
+
+  @@index([employeeId, deliveredAt])
+  @@index([warehouseId, deliveredAt])
+  @@index([deliveredAt])
+  @@map("deliveries")
+}
+
+model DeliveryItem {
+  id                    String    @id @default(uuid())
+  deliveryId            String    @map("delivery_id")
+  delivery              Delivery  @relation(fields: [deliveryId], references: [id], onDelete: Restrict)
+  epiItemId             String    @map("epi_item_id")
+  epiItem               EpiItem   @relation(fields: [epiItemId], references: [id], onDelete: Restrict)
+  stockItemId           String    @map("stock_item_id")
+  stockItem             StockItem @relation(fields: [stockItemId], references: [id], onDelete: Restrict)
+  quantity              Int
+  // Snapshots do momento da entrega (exigencia NR-6: CA vigente na entrega).
+  epiName               String    @map("epi_name")
+  caNumber              String    @map("ca_number")
+  size                  String    @default("")
+  batchNumber           String    @default("") @map("batch_number")
+  notes                 String?
+  expectedReplacementAt DateTime? @map("expected_replacement_at")
+
+  movements StockMovement[]
+  returns   EpiReturn[]
+
+  @@index([deliveryId])
+  @@map("delivery_items")
+}
+
+model DeliverySignature {
+  deliveryId  String   @id @map("delivery_id")
+  delivery    Delivery @relation(fields: [deliveryId], references: [id], onDelete: Restrict)
+  image       Bytes
+  imageType   String   @map("image_type")
+  // SHA-256 do conteudo canonico da entrega + imagem: permite verificar integridade.
+  contentHash String   @map("content_hash")
+  signedAt    DateTime @map("signed_at")
+  ipAddress   String?  @map("ip_address")
+  userAgent   String?  @map("user_agent")
+
+  @@map("delivery_signatures")
+}
 
 enum ReturnCondition {
   BOM
@@ -327,56 +423,23 @@ enum ReturnCondition {
   DESCARTADO
 }
 
-model Delivery {
-  id             String   @id @default(uuid())
-  employeeId     String   @map("employee_id")
-  employee       Employee @relation(fields: [employeeId], references: [id], onDelete: Restrict)
-  deliveredById  String   @map("delivered_by_id")
-  deliveredBy    User     @relation(fields: [deliveredById], references: [id], onDelete: Restrict)
-  deliveredAt    DateTime @default(now()) @map("delivered_at")
-  latitude       Decimal? @db.Decimal(9, 6)
-  longitude      Decimal? @db.Decimal(9, 6)
-  deviceInfo     String?  @map("device_info")
-  signatureUrl   String?  @map("signature_url")
-  receiptPdfUrl  String?  @map("receipt_pdf_url")
-  createdAt      DateTime @default(now()) @map("created_at")
-
-  items DeliveryItem[]
-
-  @@index([employeeId])
-  @@map("deliveries")
-}
-
-model DeliveryItem {
-  id                    String    @id @default(uuid())
-  deliveryId            String    @map("delivery_id")
-  delivery              Delivery  @relation(fields: [deliveryId], references: [id], onDelete: Cascade)
-  epiItemId             String    @map("epi_item_id")
-  epiItem               EpiItem   @relation(fields: [epiItemId], references: [id], onDelete: Restrict)
-  stockItemId           String?   @map("stock_item_id")
-  stockItem             StockItem? @relation(fields: [stockItemId], references: [id])
-  quantity              Int       @default(1)
-  expectedReplacementAt DateTime? @map("expected_replacement_at")
-  createdAt             DateTime  @default(now()) @map("created_at")
-
-  return EpiReturn?
-
-  @@index([deliveryId])
-  @@map("delivery_items")
-}
-
 model EpiReturn {
-  id                  String          @id @default(uuid())
-  deliveryItemId      String          @unique @map("delivery_item_id")
-  deliveryItem        DeliveryItem    @relation(fields: [deliveryItemId], references: [id], onDelete: Cascade)
-  condition           ReturnCondition
-  reason              String?
-  photoUrls           String[]        @map("photo_urls")
-  restockedToStockId  String?         @map("restocked_to_stock_id")
-  discarded           Boolean         @default(false)
-  returnedAt          DateTime        @default(now()) @map("returned_at")
-  createdAt           DateTime        @default(now()) @map("created_at")
+  id             String          @id @default(uuid())
+  deliveryItemId String          @map("delivery_item_id")
+  deliveryItem   DeliveryItem    @relation(fields: [deliveryItemId], references: [id], onDelete: Restrict)
+  quantity       Int
+  condition      ReturnCondition
+  reason         String?
+  // Preenchido quando o item volta ao estoque (condicao BOM).
+  stockItemId    String?         @map("stock_item_id")
+  stockItem      StockItem?      @relation(fields: [stockItemId], references: [id], onDelete: Restrict)
+  receivedById   String          @map("received_by_id")
+  receivedBy     User            @relation(fields: [receivedById], references: [id], onDelete: Restrict)
+  returnedAt     DateTime        @default(now()) @map("returned_at")
 
+  movements StockMovement[]
+
+  @@index([deliveryItemId])
   @@map("epi_returns")
 }
 
@@ -398,6 +461,7 @@ model AuditLog {
   createdAt DateTime @default(now()) @map("created_at")
 
   @@index([entity, entityId])
+  @@index([userId, createdAt])
   @@index([createdAt])
   @@map("audit_logs")
 }

@@ -1,56 +1,50 @@
 import cookieParser from "cookie-parser";
 import cors from "cors";
-import express from "express";
-import { rateLimit } from "express-rate-limit";
+import express, { Router } from "express";
 import helmet from "helmet";
-import swaggerUi from "swagger-ui-express";
 import { createAuthRouter } from "./modules/auth/http/auth.routes.js";
-import { createEmployeeRouter } from "./modules/employee/http/employee.routes.js";
-import { createEpiCaRouter } from "./modules/epi/http/epi-ca.routes.js";
-import { createEpiItemRouter } from "./modules/epi/http/epi-item.routes.js";
-import { healthRouter } from "./modules/health/health.routes.js";
-import { createBusinessUnitRouter } from "./modules/organization/http/business-unit.routes.js";
-import { createCompanyRouter } from "./modules/organization/http/company.routes.js";
-import { createDepartmentRouter } from "./modules/organization/http/department.routes.js";
-import { createJobRoleRouter } from "./modules/organization/http/job-role.routes.js";
+import { createDeliveriesRouter } from "./modules/deliveries/deliveries.routes.js";
+import { createEmployeesRouter } from "./modules/employees/employees.routes.js";
+import { createEpisRouter } from "./modules/epis/epis.routes.js";
+import { createOrganizationRouter } from "./modules/organization/organization.routes.js";
+import { createStockRouter } from "./modules/stock/stock.routes.js";
+import { createUsersRouter } from "./modules/users/users.routes.js";
+import { createWarehousesRouter } from "./modules/warehouses/warehouses.routes.js";
 import { env } from "./shared/env.js";
-import { errorHandler } from "./shared/middlewares/error-handler.js";
-import { notFoundHandler } from "./shared/middlewares/not-found.js";
-import { swaggerSpec } from "./shared/swagger.js";
+import { errorHandler, notFoundHandler } from "./shared/http/error-handler.js";
+import { globalRateLimiter } from "./shared/http/rate-limiters.js";
 
 export function createApp() {
   const app = express();
 
+  // Necessario para req.ip correto (rate limit, auditoria) atras de proxy reverso.
+  app.set("trust proxy", env.TRUST_PROXY);
+  app.disable("x-powered-by");
+
   app.use(helmet());
-  app.use(
-    cors({
-      origin: env.CORS_ORIGIN,
-      credentials: true,
-    }),
-  );
-  app.use(express.json({ limit: "2mb" }));
+  if (env.CORS_ORIGIN) {
+    app.use(cors({ origin: env.CORS_ORIGIN, credentials: true }));
+  }
+  // A assinatura (PNG em base64) so trafega no registro de entrega; o resto da API usa limite baixo.
+  app.use("/api/deliveries", express.json({ limit: "512kb" }));
+  app.use(express.json({ limit: "100kb" }));
   app.use(cookieParser());
-  app.use(
-    rateLimit({
-      windowMs: 15 * 60 * 1000,
-      limit: 300,
-      standardHeaders: true,
-      legacyHeaders: false,
-    }),
-  );
+  app.use("/api", globalRateLimiter);
 
-  app.use("/docs", swaggerUi.serve, swaggerUi.setup(swaggerSpec));
+  const api = Router();
+  api.get("/health", (_req, res) => {
+    res.json({ status: "ok" });
+  });
+  api.use(createAuthRouter());
+  api.use(createUsersRouter());
+  api.use(createOrganizationRouter());
+  api.use(createWarehousesRouter());
+  api.use(createEmployeesRouter());
+  api.use(createEpisRouter());
+  api.use(createStockRouter());
+  api.use(createDeliveriesRouter());
 
-  app.use(healthRouter);
-  app.use(createAuthRouter());
-  app.use(createCompanyRouter());
-  app.use(createBusinessUnitRouter());
-  app.use(createDepartmentRouter());
-  app.use(createJobRoleRouter());
-  app.use(createEpiItemRouter());
-  app.use(createEpiCaRouter());
-  app.use(createEmployeeRouter());
-
+  app.use("/api", api);
   app.use(notFoundHandler);
   app.use(errorHandler);
 

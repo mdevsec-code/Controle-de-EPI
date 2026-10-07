@@ -1,98 +1,124 @@
-import { Eye, EyeOff, LogIn, ShieldCheck } from "lucide-react";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { loginRequestSchema, type LoginRequest } from "@epi-manager/contracts";
+import { AnimatePresence } from "motion/react";
+import * as m from "motion/react-m";
+import { Lock, LogIn, Mail } from "lucide-react";
 import { useState } from "react";
-import { Button } from "../../shared/components/ui/button";
-import { Checkbox } from "../../shared/components/ui/checkbox";
-import { Input } from "../../shared/components/ui/input";
+import { useForm } from "react-hook-form";
+import { Navigate, useLocation, useNavigate } from "react-router-dom";
+import { Stagger, StaggerItem } from "@/components/motion/primitives";
+import { Button } from "@/components/ui/button";
+import { Logo } from "@/components/ui/controls";
+import { InlineError } from "@/components/ui/feedback";
+import { Field, Input, PasswordInput } from "@/components/ui/field";
+import { EASE } from "@/lib/motion";
+import { useLogin } from "./auth-api";
+import { LoginSkyline } from "./login-skyline";
+import { useSessionStore } from "./session-store";
 
 export function LoginPage() {
-  const [showPassword, setShowPassword] = useState(false);
+  const status = useSessionStore((s) => s.status);
+  const login = useLogin();
+  const navigate = useNavigate();
+  const from = (useLocation().state as { from?: string } | null)?.from ?? "/";
+  const [forgotOpen, setForgotOpen] = useState(false);
+
+  const form = useForm<LoginRequest>({
+    resolver: zodResolver(loginRequestSchema),
+    defaultValues: { email: "", password: "" },
+  });
+
+  if (status === "authenticated") return <Navigate to={from} replace />;
+
+  const onSubmit = form.handleSubmit((values) =>
+    login.mutate(values, { onSuccess: () => navigate(from, { replace: true }) }),
+  );
 
   return (
-    <div className="flex min-h-screen bg-white dark:bg-neutral-900">
-      <div className="hidden w-1/2 flex-col justify-between bg-gradient-to-br from-primary-700 to-primary-900 p-12 text-white lg:flex">
-        <div className="flex items-center gap-2">
-          <div className="flex h-9 w-9 items-center justify-center rounded-md bg-white/15">
-            <ShieldCheck className="h-5 w-5" />
-          </div>
-          <span className="text-lg font-semibold">EPI Manager</span>
-        </div>
-        <div className="max-w-md">
-          <h2 className="text-3xl font-semibold leading-tight">
-            Controle completo do ciclo de vida dos EPIs da sua operacao.
-          </h2>
-          <p className="mt-4 text-sm text-primary-100">
-            Cadastro, estoque, entregas, devolucoes e auditoria em um unico sistema corporativo.
-          </p>
-        </div>
-        <p className="text-xs text-primary-200">EPI Manager - versao 1.0.0</p>
-      </div>
+    <div className="flex min-h-dvh flex-col bg-white">
+      <main className="mx-auto flex w-full max-w-sm flex-1 flex-col px-7 pt-[calc(3rem+env(safe-area-inset-top))]">
+        <Stagger step={0.06}>
+          <StaggerItem className="flex justify-center">
+            <Logo className="w-72" />
+          </StaggerItem>
+          <StaggerItem className="mt-8 text-center">
+            <h1 className="font-display font-extrabold uppercase leading-tight text-neutral-900">
+              <span className="block text-lg">Controle de</span>
+              <span className="block text-[26px]">
+                Entrega de <span className="text-primary-500">EPIs</span>
+              </span>
+            </h1>
+            <p className="mt-2 text-sm text-neutral-500">Faça login para continuar</p>
+          </StaggerItem>
 
-      <div className="flex min-w-0 flex-1 items-center justify-center p-6 lg:w-1/2">
-        <div className="w-full max-w-sm">
-          <div className="mb-8 flex flex-col items-center gap-3 lg:hidden">
-            <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-primary-600 text-white">
-              <ShieldCheck className="h-6 w-6" />
-            </div>
-            <span className="text-lg font-semibold text-neutral-900 dark:text-neutral-50">
-              EPI Manager
-            </span>
-          </div>
-
-          <h1 className="text-center text-xl font-semibold text-neutral-900 lg:text-left dark:text-neutral-50">
-            Controle de entrega de EPIs
-          </h1>
-          <p className="mt-1 text-center text-sm text-neutral-500 lg:text-left dark:text-neutral-400">
-            Faca login para continuar
-          </p>
-
-          <form className="mt-8 space-y-4">
-            <div>
-              <label htmlFor="username" className="mb-1.5 block text-sm font-medium text-neutral-700 dark:text-neutral-300">
-                Usuario
-              </label>
-              <Input id="username" name="username" type="text" autoComplete="username" placeholder="seu.usuario" />
-            </div>
-
-            <div>
-              <label htmlFor="password" className="mb-1.5 block text-sm font-medium text-neutral-700 dark:text-neutral-300">
-                Senha
-              </label>
-              <div className="relative">
+          <form onSubmit={onSubmit} noValidate className="mt-7 space-y-3.5">
+            <StaggerItem>
+              <Field label="E-mail" hideLabel error={form.formState.errors.email?.message}>
                 <Input
-                  id="password"
-                  name="password"
-                  type={showPassword ? "text" : "password"}
-                  autoComplete="current-password"
-                  placeholder="********"
-                  className="pr-10"
+                  type="email"
+                  autoComplete="username"
+                  inputMode="email"
+                  autoCapitalize="none"
+                  placeholder="E-mail"
+                  icon={<Mail className="h-[18px] w-[18px]" />}
+                  {...form.register("email")}
                 />
-                <button
-                  type="button"
-                  onClick={() => setShowPassword((prev) => !prev)}
-                  aria-label={showPassword ? "Ocultar senha" : "Mostrar senha"}
-                  className="absolute inset-y-0 right-0 flex w-10 items-center justify-center text-neutral-400 hover:text-neutral-600 dark:hover:text-neutral-200"
-                >
-                  {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                </button>
-              </div>
-            </div>
+              </Field>
+            </StaggerItem>
 
-            <div className="flex items-center justify-between text-sm">
-              <Checkbox id="remember" name="remember" label="Lembrar de mim" />
-              <a href="#" className="font-medium text-primary-600 hover:text-primary-700">
+            <StaggerItem>
+              <Field label="Senha" hideLabel error={form.formState.errors.password?.message}>
+                <PasswordInput
+                  autoComplete="current-password"
+                  placeholder="Senha"
+                  icon={<Lock className="h-[18px] w-[18px]" />}
+                  {...form.register("password")}
+                />
+              </Field>
+            </StaggerItem>
+
+            <StaggerItem className="flex justify-end">
+              <button
+                type="button"
+                onClick={() => setForgotOpen((v) => !v)}
+                aria-expanded={forgotOpen}
+                className="text-[13px] font-semibold text-primary-700 hover:underline"
+              >
                 Esqueci minha senha
-              </a>
-            </div>
+              </button>
+            </StaggerItem>
+            <AnimatePresence initial={false}>
+              {forgotOpen && (
+                <m.p
+                  className="overflow-hidden text-center text-xs text-neutral-500"
+                  initial={{ opacity: 0, height: 0 }}
+                  animate={{ opacity: 1, height: "auto" }}
+                  exit={{ opacity: 0, height: 0 }}
+                  transition={{ duration: 0.25, ease: EASE }}
+                >
+                  Peça ao administrador do sistema para redefinir sua senha.
+                </m.p>
+              )}
+            </AnimatePresence>
 
-            <Button type="submit" fullWidth size="lg">
-              <LogIn className="h-4 w-4" />
-              Entrar
-            </Button>
+            <InlineError error={login.error} />
+
+            <StaggerItem className="pt-2">
+              <Button type="submit" size="lg" fullWidth loading={login.isPending}>
+                {!login.isPending && <LogIn className="h-5 w-5" aria-hidden="true" />}
+                Entrar
+              </Button>
+            </StaggerItem>
           </form>
 
-          <p className="mt-8 text-center text-xs text-neutral-400">Versao 1.0.0</p>
-        </div>
-      </div>
+          <StaggerItem>
+            <p className="mt-5 text-center text-[11px] text-neutral-500">
+              Versão {__APP_VERSION__}
+            </p>
+          </StaggerItem>
+        </Stagger>
+      </main>
+      <LoginSkyline />
     </div>
   );
 }

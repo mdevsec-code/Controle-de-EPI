@@ -1,6 +1,0 @@
-{
-  "name": "@epi-manager/mobile-pwa",
-  "private": true,
-  "version": "0.1.0",
-  "description": "Fluxo de campo (entrega, devolucao, scanner) - PWA offline-first"
-}

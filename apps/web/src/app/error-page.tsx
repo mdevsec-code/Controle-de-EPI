@@ -1,25 +1,48 @@
 import { AlertTriangle } from "lucide-react";
-import { isRouteErrorResponse, useRouteError } from "react-router-dom";
-import { Button } from "../shared/components/ui/button";
+import { Link, useRouteError } from "react-router-dom";
+import { buttonVariants } from "@/components/ui/button-variants";
 
-export function ErrorPage() {
+/**
+ * Erro de renderizacao/rota. Mostra mensagem util e NUNCA o stack trace;
+ * o detalhe tecnico vai apenas para o console do navegador.
+ */
+export function ErrorPage({ notFound }: { notFound?: boolean }) {
   const error = useRouteError();
-  const message = isRouteErrorResponse(error)
-    ? error.statusText
-    : error instanceof Error
-      ? error.message
-      : "Erro inesperado";
+  if (error && !notFound) console.error(error);
+
+  // Novo deploy: chunks antigos somem do servidor; recarregar resolve.
+  const staleChunk =
+    error instanceof TypeError &&
+    /dynamically imported module|Importing a module script/i.test(error.message);
 
   return (
-    <div className="flex min-h-screen flex-col items-center justify-center gap-4 bg-neutral-50 p-6 text-center dark:bg-neutral-900">
-      <div className="flex h-14 w-14 items-center justify-center rounded-full bg-danger-50 text-danger-600 dark:bg-danger-500/10">
-        <AlertTriangle className="h-7 w-7" />
-      </div>
-      <h1 className="text-lg font-semibold text-neutral-900 dark:text-neutral-50">
-        Algo deu errado
+    <div className="flex min-h-[60dvh] flex-col items-center justify-center gap-4 p-6 text-center">
+      <span className="flex h-14 w-14 items-center justify-center rounded-full bg-primary-100 text-primary-500">
+        <AlertTriangle className="h-7 w-7" aria-hidden="true" />
+      </span>
+      <h1 className="text-xl font-bold text-neutral-900">
+        {notFound ? "Página não encontrada" : "Algo deu errado"}
       </h1>
-      <p className="max-w-sm text-sm text-neutral-500 dark:text-neutral-400">{message}</p>
-      <Button onClick={() => window.location.assign("/")}>Voltar ao inicio</Button>
+      <p className="max-w-sm text-sm text-neutral-500">
+        {notFound
+          ? "O endereço acessado não existe."
+          : staleChunk
+            ? "O sistema foi atualizado. Recarregue a página para continuar."
+            : "Não foi possível exibir esta tela. Tente novamente; se persistir, avise o suporte."}
+      </p>
+      {staleChunk ? (
+        <button
+          type="button"
+          className={buttonVariants({ size: "lg" })}
+          onClick={() => window.location.reload()}
+        >
+          Recarregar
+        </button>
+      ) : (
+        <Link to="/" className={buttonVariants({ size: "lg" })}>
+          Voltar ao início
+        </Link>
+      )}
     </div>
   );
 }
