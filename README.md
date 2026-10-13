@@ -2,7 +2,11 @@
   <img src="apps/web/src/assets/engenova-logo.svg" alt="ENGENOVA Engenharia e Construção" width="320">
 </p>
 
-<h1 align="center">Controle de Entrega de EPIs</h1>
+<h1 align="center">🦺 Controle de Entrega de EPIs</h1>
+
+<p align="center">
+  <em>Entregou, assinou, registrou: rastreabilidade de EPI do almoxarifado ao colaborador.</em>
+</p>
 
 <p align="center">
   Sistema web da <strong>ENGENOVA</strong> para registrar a entrega de Equipamentos de Proteção
@@ -11,31 +15,48 @@
 </p>
 
 <p align="center">
-  <img alt="Node 20+" src="https://img.shields.io/badge/node-%E2%89%A520-339933">
-  <img alt="pnpm 9" src="https://img.shields.io/badge/pnpm-9-F69220">
-  <img alt="TypeScript" src="https://img.shields.io/badge/TypeScript-strict-3178C6">
-  <img alt="PostgreSQL 16" src="https://img.shields.io/badge/PostgreSQL-16-4169E1">
-  <img alt="React 19" src="https://img.shields.io/badge/React-19-61DAFB">
+  <a href="https://github.com/mdevsec-code/Controle-de-EPI/actions/workflows/ci.yml"><img alt="CI" src="https://github.com/mdevsec-code/Controle-de-EPI/actions/workflows/ci.yml/badge.svg"></a>
+  <img alt="Node 20+" src="https://img.shields.io/badge/node-%E2%89%A520-339933?style=flat-square">
+  <img alt="pnpm 9" src="https://img.shields.io/badge/pnpm-9-F69220?style=flat-square">
+  <img alt="TypeScript" src="https://img.shields.io/badge/TypeScript-strict-3178C6?style=flat-square">
+  <img alt="NR-6" src="https://img.shields.io/badge/NR--6-rastreabilidade-1F6FEB?style=flat-square">
+</p>
+
+<p align="center">
+  <img src="https://img.shields.io/badge/React_19-20232A?style=for-the-badge&logo=react&logoColor=61DAFB" alt="React">
+  <img src="https://img.shields.io/badge/TypeScript-007ACC?style=for-the-badge&logo=typescript&logoColor=white" alt="TypeScript">
+  <img src="https://img.shields.io/badge/Vite-646CFF?style=for-the-badge&logo=vite&logoColor=white" alt="Vite">
+  <img src="https://img.shields.io/badge/TailwindCSS-06B6D4?style=for-the-badge&logo=tailwindcss&logoColor=white" alt="Tailwind CSS">
+  <img src="https://img.shields.io/badge/TanStack_Query-FF4154?style=for-the-badge&logo=reactquery&logoColor=white" alt="TanStack Query">
+  <br>
+  <img src="https://img.shields.io/badge/Express-000000?style=for-the-badge&logo=express&logoColor=white" alt="Express">
+  <img src="https://img.shields.io/badge/Prisma-2D3748?style=for-the-badge&logo=prisma&logoColor=white" alt="Prisma">
+  <img src="https://img.shields.io/badge/PostgreSQL-4169E1?style=for-the-badge&logo=postgresql&logoColor=white" alt="PostgreSQL">
+  <img src="https://img.shields.io/badge/Zod-3E67B1?style=for-the-badge&logo=zod&logoColor=white" alt="Zod">
+  <img src="https://img.shields.io/badge/Turborepo-EF4444?style=for-the-badge&logo=turborepo&logoColor=white" alt="Turborepo">
+  <img src="https://img.shields.io/badge/Vitest-6E9F18?style=for-the-badge&logo=vitest&logoColor=white" alt="Vitest">
 </p>
 
 ---
 
-## Sumário
+## 📑 Sumário
 
-- [Visão geral](#visão-geral)
-- [Telas](#telas)
-- [Funcionalidades](#funcionalidades)
-- [Perfis de acesso](#perfis-de-acesso)
-- [Stack](#stack)
-- [Começando (desenvolvimento local)](#começando-desenvolvimento-local)
-- [Scripts](#scripts)
-- [Estrutura do repositório](#estrutura-do-repositório)
-- [Documentação](#documentação)
-- [Qualidade e testes](#qualidade-e-testes)
-- [Deploy](#deploy)
-- [Licença](#licença)
+- [🔭 Visão geral](#-visão-geral)
+- [📸 Telas](#-telas)
+- [✨ Funcionalidades](#-funcionalidades)
+- [🔐 Perfis de acesso](#-perfis-de-acesso)
+- [🛠️ Stack](#️-stack)
+- [🚀 Começando (desenvolvimento local)](#-começando-desenvolvimento-local)
+- [⚙️ Scripts](#️-scripts)
+- [🏗️ Estrutura do repositório](#️-estrutura-do-repositório)
+- [📚 Documentação](#-documentação)
+- [🧪 Qualidade e testes](#-qualidade-e-testes)
+- [☁️ Deploy](#️-deploy)
+- [📜 Licença](#-licença)
 
-## Visão geral
+---
+
+## 🔭 Visão geral
 
 O almoxarife identifica o colaborador (pelo **QR Code do crachá** ou por busca), escolhe os EPIs,
 informa quantidade e motivo, e o colaborador **assina na tela** do celular ou tablet. A entrega é
@@ -57,7 +78,9 @@ usuários. Toda ação relevante fica na **auditoria**.
 | Saber quem fez o quê                                 | `audit_logs` com usuário, ação, antes/depois, IP e navegador, na mesma transação da ação |
 | Funcionar no celular do almoxarife e no PC da gestão | App único e responsivo (360 px a 1920 px), com telas de início diferentes para cada um   |
 
-## Telas
+---
+
+## 📸 Telas
 
 ### Celular: fluxo de entrega
 
@@ -85,7 +108,9 @@ usuários. Toda ação relevante fica na **auditoria**.
 
 Mais telas em [docs/guia-do-usuario.md](docs/guia-do-usuario.md).
 
-## Funcionalidades
+---
+
+## ✨ Funcionalidades
 
 **Entrega de EPI (celular)**
 
@@ -119,7 +144,9 @@ Mais telas em [docs/guia-do-usuario.md](docs/guia-do-usuario.md).
 - **Usuários** (ADMIN): perfis, vínculo com almoxarifados, ativação e senha provisória.
 - **Conta**: troca de senha (obrigatória no 1º acesso com senha provisória).
 
-## Perfis de acesso
+---
+
+## 🔐 Perfis de acesso
 
 | Ação                                           | ADMIN | ALMOXARIFADO                                     |
 | ---------------------------------------------- | :---: | :----------------------------------------------- |
@@ -133,7 +160,9 @@ Mais telas em [docs/guia-do-usuario.md](docs/guia-do-usuario.md).
 As permissões são verificadas **na API** em todas as rotas. Esconder um botão na tela é só
 conveniência. Detalhes em [SECURITY.md](SECURITY.md).
 
-## Stack
+---
+
+## 🛠️ Stack
 
 | Camada    | Tecnologia                                                                                                  |
 | --------- | ----------------------------------------------------------------------------------------------------------- |
@@ -144,7 +173,9 @@ conveniência. Detalhes em [SECURITY.md](SECURITY.md).
 | Testes    | Vitest, Testing Library (web), Supertest + PostgreSQL real (integração da API)                              |
 | Qualidade | ESLint 9 (incl. `jsx-a11y`), Prettier, commitlint, Husky, Turborepo, GitHub Actions                         |
 
-## Começando (desenvolvimento local)
+---
+
+## 🚀 Começando (desenvolvimento local)
 
 Pré-requisitos: **Node.js ≥ 20** (CI usa 22), **pnpm 9** (`corepack enable`) e **PostgreSQL 16**
 (via Docker ou instalação local).
@@ -181,7 +212,9 @@ crachá na tela de outro aparelho.
 Passo a passo completo, variáveis de ambiente, solução de problemas e convenções em
 [docs/desenvolvimento.md](docs/desenvolvimento.md).
 
-## Scripts
+---
+
+## ⚙️ Scripts
 
 | Comando                                           | O que faz                                                         |
 | ------------------------------------------------- | ----------------------------------------------------------------- |
@@ -198,7 +231,9 @@ Passo a passo completo, variáveis de ambiente, solução de problemas e conven�
 | `pnpm db:studio`                                  | Prisma Studio                                                     |
 | `pnpm docker:up` / `pnpm docker:down`             | PostgreSQL de desenvolvimento via Docker                          |
 
-## Estrutura do repositório
+---
+
+## 🏗️ Estrutura do repositório
 
 ```
 apps/
@@ -221,7 +256,9 @@ docs/                  documentação detalhada e imagens
 legado/                protótipo original e capturas (referência visual e funcional)
 ```
 
-## Documentação
+---
+
+## 📚 Documentação
 
 | Documento                                          | Conteúdo                                                                                 |
 | -------------------------------------------------- | ---------------------------------------------------------------------------------------- |
@@ -238,7 +275,9 @@ legado/                protótipo original e capturas (referência visual e func
 | [AUDIT.md](AUDIT.md)                               | Auditoria do sistema original e situação de cada achado                                  |
 | [docs/refactor-plan.md](docs/refactor-plan.md)     | Plano da refatoração e registro das mudanças (ATUAL → NOVO → IMPACTO)                    |
 
-## Qualidade e testes
+---
+
+## 🧪 Qualidade e testes
 
 | Nível                     | Onde                           | O que cobre                                                                                               |
 | ------------------------- | ------------------------------ | --------------------------------------------------------------------------------------------------------- |
@@ -255,14 +294,24 @@ O GitHub Actions ([.github/workflows/ci.yml](.github/workflows/ci.yml)) roda em 
 formatação, lint, typecheck, testes unitários, integração com PostgreSQL 16, conferência de drift
 entre migrations e schema, e build.
 
-## Deploy
+---
+
+## ☁️ Deploy
 
 Resumo: `pnpm install --frozen-lockfile && pnpm db:generate && pnpm build`, depois `pnpm db:deploy`
 antes de subir a API (`node apps/api/dist/main.js`). O web (`apps/web/dist`) é servido como estático
 com proxy de `/api` para a API **no mesmo domínio** e HTTPS obrigatório. Guia completo, exemplo de
 Nginx, backup e checklist em [docs/deploy.md](docs/deploy.md).
 
-## Licença
+---
+
+## 📜 Licença
 
 Nenhuma licença de código aberto foi definida para este repositório. Sem um arquivo `LICENSE`,
 todos os direitos ficam reservados aos autores; defina a licença antes de distribuir o código.
+
+---
+
+<p align="center">
+  <sub>Feito para a <strong>ENGENOVA Construções</strong> · Camaçari, BA</sub>
+</p>
