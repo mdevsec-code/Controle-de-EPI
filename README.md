@@ -260,20 +260,22 @@ legado/                protótipo original e capturas (referência visual e func
 
 ## 📚 Documentação
 
-| Documento                                          | Conteúdo                                                                                 |
-| -------------------------------------------------- | ---------------------------------------------------------------------------------------- |
-| [docs/guia-do-usuario.md](docs/guia-do-usuario.md) | Manual de uso, tela a tela, para almoxarifes e administradores                           |
-| [ARCHITECTURE.md](ARCHITECTURE.md)                 | Arquitetura, camadas, domínio, concorrência, autenticação, frontend                      |
-| [docs/api.md](docs/api.md)                         | Referência da API REST: rotas, parâmetros, respostas, erros e permissões                 |
-| [docs/banco-de-dados.md](docs/banco-de-dados.md)   | Modelo de dados, diagrama, tabelas, restrições, migrations e seed                        |
-| [docs/interface.md](docs/interface.md)             | Identidade visual, design system, animações, responsividade e acessibilidade             |
-| [docs/desenvolvimento.md](docs/desenvolvimento.md) | Ambiente local, variáveis, scripts, testes, convenções, como criar features e migrations |
-| [docs/deploy.md](docs/deploy.md)                   | Produção: build, migrations, proxy reverso, HTTPS, backup e checklist                    |
-| [SECURITY.md](SECURITY.md)                         | Modelo de segurança, autenticação, autorização, auditoria e riscos conhecidos            |
-| [CONTRIBUTING.md](CONTRIBUTING.md)                 | Fluxo de trabalho, branches, commits e checklist de PR                                   |
-| [CHANGELOG.md](CHANGELOG.md)                       | Histórico de mudanças                                                                    |
-| [AUDIT.md](AUDIT.md)                               | Auditoria do sistema original e situação de cada achado                                  |
-| [docs/refactor-plan.md](docs/refactor-plan.md)     | Plano da refatoração e registro das mudanças (ATUAL → NOVO → IMPACTO)                    |
+| Documento                                                        | Conteúdo                                                                                                                            |
+| ---------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------- |
+| [docs/documentacao-tecnica.html](docs/documentacao-tecnica.html) | Visão técnica em página única, com diagramas: arquitetura, transação de entrega, autenticação, escopo, assinatura, estoque e testes |
+| [docs/casos-de-uso.html](docs/casos-de-uso.html)                 | 46 casos de uso em 10 pacotes, com atores, rotas, fluxos e exceções                                                                 |
+| [docs/guia-do-usuario.md](docs/guia-do-usuario.md)               | Manual de uso, tela a tela, para almoxarifes e administradores                                                                      |
+| [ARCHITECTURE.md](ARCHITECTURE.md)                               | Arquitetura, camadas, domínio, concorrência, autenticação, frontend                                                                 |
+| [docs/api.md](docs/api.md)                                       | Referência da API REST: rotas, parâmetros, respostas, erros e permissões                                                            |
+| [docs/banco-de-dados.md](docs/banco-de-dados.md)                 | Modelo de dados, diagrama, tabelas, restrições, migrations e seed                                                                   |
+| [docs/interface.md](docs/interface.md)                           | Identidade visual, design system, animações, responsividade e acessibilidade                                                        |
+| [docs/desenvolvimento.md](docs/desenvolvimento.md)               | Ambiente local, variáveis, scripts, testes, convenções, como criar features e migrations                                            |
+| [docs/deploy.md](docs/deploy.md)                                 | Produção: build, migrations, proxy reverso, HTTPS, backup e checklist                                                               |
+| [SECURITY.md](SECURITY.md)                                       | Modelo de segurança, autenticação, autorização, auditoria e riscos conhecidos                                                       |
+| [CONTRIBUTING.md](CONTRIBUTING.md)                               | Fluxo de trabalho, branches, commits e checklist de PR                                                                              |
+| [CHANGELOG.md](CHANGELOG.md)                                     | Histórico de mudanças                                                                                                               |
+| [AUDIT.md](AUDIT.md)                                             | Auditoria do sistema original e situação de cada achado                                                                             |
+| [docs/refactor-plan.md](docs/refactor-plan.md)                   | Plano da refatoração e registro das mudanças (ATUAL → NOVO → IMPACTO)                                                               |
 
 ---
 

@@ -1,0 +1,425 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Arquitetura do Controle de EPIs</title>
+<style>
+  /* Layout: índice fixo à esquerda, documento à direita; uma coluna no celular. */
+  :root {
+    --paper: #eef1f5; --surface: #ffffff; --surface-2: #f5f7fa; --line: #d7dde6;
+    --ink: #131c2e; --ink-soft: #55647d; --ink-faint: #75849c;
+    --accent: #2454c7; --accent-soft: #e4ecfc; --warm: #a8571c; --warm-soft: #fbeadd; --good: #0f8a6b;
+    --chip-ink: #ffffff;
+    --a1: #2454c7; --a2: #0f8a6b; --a3: #a8571c; --a4: #6b5bd6; --a5: #b4235a; --a6: #0f7a94; --a7: #5a6478; --a8: #7a5c00;
+    --shadow: 0 1px 2px rgba(19,28,46,0.06), 0 8px 24px -12px rgba(19,28,46,0.18);
+    --font-sans: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+    --font-mono: "IBM Plex Mono", ui-monospace, "Cascadia Code", Consolas, monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --paper: #0d1220; --surface: #141b2c; --surface-2: #182035; --line: #29334a;
+      --ink: #e8ecf5; --ink-soft: #a7b2c8; --ink-faint: #7f8aa5;
+      --accent: #6c93ff; --accent-soft: #1c2740; --warm: #e0965a; --warm-soft: #2c2113; --good: #4fd3a8;
+      --chip-ink: #0d1220;
+      --a1: #6c93ff; --a2: #4fd3a8; --a3: #e0965a; --a4: #b0a1f5; --a5: #f07fa8; --a6: #5cc8e0; --a7: #a7b2c8; --a8: #d9b44a;
+      --shadow: 0 1px 2px rgba(0,0,0,0.3), 0 8px 24px -12px rgba(0,0,0,0.5);
+      color-scheme: dark;
+    }
+  }
+  :root[data-theme="dark"] {
+    --paper: #0d1220; --surface: #141b2c; --surface-2: #182035; --line: #29334a;
+    --ink: #e8ecf5; --ink-soft: #a7b2c8; --ink-faint: #7f8aa5;
+    --accent: #6c93ff; --accent-soft: #1c2740; --warm: #e0965a; --warm-soft: #2c2113; --good: #4fd3a8;
+    --chip-ink: #0d1220;
+    --a1: #6c93ff; --a2: #4fd3a8; --a3: #e0965a; --a4: #b0a1f5; --a5: #f07fa8; --a6: #5cc8e0; --a7: #a7b2c8; --a8: #d9b44a;
+    --shadow: 0 1px 2px rgba(0,0,0,0.3), 0 8px 24px -12px rgba(0,0,0,0.5);
+    color-scheme: dark;
+  }
+
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--paper); color: var(--ink); font-family: var(--font-sans); font-size: 15px; line-height: 1.6; }
+  h1, h2, h3, h4, .mono { font-family: var(--font-mono); }
+  h1, h2, h3 { text-wrap: balance; color: var(--ink); }
+  code { font-family: var(--font-mono); background: var(--surface-2); border: 1px solid var(--line); border-radius: 4px; padding: 1px 5px; font-size: 0.86em; overflow-wrap: anywhere; }
+  a { color: var(--accent); }
+  a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 3px; }
+
+  .shell { display: grid; grid-template-columns: 250px minmax(0, 1fr); max-width: 1220px; margin: 0 auto; align-items: start; }
+  aside { position: sticky; top: env(safe-area-inset-top, 0px); max-height: 100vh; overflow-y: auto; padding: 28px 18px 28px 28px; border-right: 1px solid var(--line); }
+  .brand { font-size: 0.68rem; letter-spacing: 0.09em; text-transform: uppercase; color: var(--ink-faint); }
+  .brand strong { display: block; font-size: 0.92rem; letter-spacing: 0.02em; color: var(--accent); margin-top: 4px; text-transform: none; }
+  nav.toc { margin-top: 26px; display: flex; flex-direction: column; gap: 2px; }
+  nav.toc a { display: flex; gap: 8px; align-items: baseline; padding: 6px 10px; border-radius: 6px; color: var(--ink-soft); text-decoration: none; font-size: 0.82rem; }
+  nav.toc a:hover { background: var(--surface-2); color: var(--ink); }
+  nav.toc .tag { font-family: var(--font-mono); font-size: 0.68rem; color: var(--ink-faint); min-width: 20px; }
+  .actors { margin-top: 22px; padding-top: 16px; border-top: 1px solid var(--line); display: flex; flex-direction: column; gap: 6px; }
+  .actor-key { display: flex; align-items: center; gap: 8px; font-size: 0.76rem; color: var(--ink-soft); }
+  .actor-dot { width: 9px; height: 9px; border-radius: 50%; flex-shrink: 0; }
+  .xlink { margin-top: 22px; padding-top: 16px; border-top: 1px solid var(--line); font-size: 0.78rem; color: var(--ink-soft); }
+
+  main { padding: 40px 40px 120px; min-width: 0; }
+  .doc-kicker { font-family: var(--font-mono); font-size: 0.72rem; letter-spacing: 0.12em; text-transform: uppercase; color: var(--accent); font-weight: 600; }
+  h1 { font-size: 1.9rem; margin: 6px 0 10px; font-weight: 700; line-height: 1.25; }
+  .doc-meta { display: flex; flex-wrap: wrap; gap: 8px 18px; font-size: 0.78rem; color: var(--ink-faint); padding-bottom: 24px; border-bottom: 1px solid var(--line); margin-bottom: 32px; }
+  .doc-meta strong { color: var(--ink-soft); }
+  section.intro p { max-width: 70ch; color: var(--ink-soft); margin: 0 0 14px; }
+  section.intro p:first-of-type { color: var(--ink); }
+
+  .sec, .pkg { margin-top: 52px; scroll-margin-top: 24px; }
+  .sec-head, .pkg-head { display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px 12px; padding-bottom: 10px; border-bottom: 2px solid var(--ink); margin-bottom: 18px; }
+  .sec-num, .pkg-num { font-family: var(--font-mono); font-size: 0.78rem; color: var(--accent); font-weight: 700; }
+  .sec-head h2, .pkg-head h2 { font-size: 1.24rem; margin: 0; }
+  .sec p { max-width: 74ch; color: var(--ink-soft); }
+  .sec p strong, ul.plain strong { color: var(--ink); }
+  .pkg-actors { display: flex; flex-wrap: wrap; gap: 6px; margin-left: auto; }
+  .pkg-note { color: var(--ink-faint); font-size: 0.84rem; max-width: 70ch; margin: 10px 0 20px; }
+  .actor-chip { font-family: var(--font-mono); font-size: 0.66rem; letter-spacing: 0.03em; padding: 2px 8px; border-radius: 999px; color: var(--chip-ink); white-space: nowrap; }
+
+  figure { margin: 24px 0 32px; }
+  figure .frame { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 20px; box-shadow: var(--shadow); overflow-x: auto; }
+  figure pre.mermaid { margin: 0; display: flex; justify-content: center; font-family: var(--font-mono); font-size: 0.8rem; color: var(--ink-soft); }
+  figcaption { margin-top: 10px; font-size: 0.8rem; color: var(--ink-faint); max-width: 74ch; }
+
+  .table-wrap { overflow-x: auto; margin: 18px 0 28px; }
+  table { width: 100%; border-collapse: collapse; background: var(--surface); border: 1px solid var(--line); border-radius: 8px; overflow: hidden; box-shadow: var(--shadow); font-size: 0.86rem; }
+  th, td { text-align: left; padding: 10px 14px; border-bottom: 1px solid var(--line); vertical-align: top; }
+  th { background: var(--surface-2); font-family: var(--font-mono); font-size: 0.7rem; letter-spacing: 0.04em; text-transform: uppercase; color: var(--ink-faint); white-space: nowrap; }
+  td { color: var(--ink-soft); }
+  td strong { color: var(--ink); }
+  tr:last-child td { border-bottom: none; }
+  td.mono { font-family: var(--font-mono); font-size: 0.8rem; color: var(--ink); white-space: nowrap; }
+  .pill { display: inline-block; font-family: var(--font-mono); font-size: 0.66rem; padding: 2px 7px; border-radius: 999px; background: var(--accent-soft); color: var(--accent); white-space: nowrap; margin: 1px 0; }
+  .pill.warm { background: var(--warm-soft); color: var(--warm); }
+  .same { color: var(--good); font-family: var(--font-mono); font-size: 0.74rem; white-space: nowrap; }
+
+  .callout { background: var(--surface); border: 1px solid var(--line); border-left: 3px solid var(--accent); border-radius: 0 8px 8px 0; padding: 14px 18px; margin: 18px 0; box-shadow: var(--shadow); max-width: 80ch; }
+  .callout p { margin: 0; color: var(--ink-soft); }
+  .callout .k { font-family: var(--font-mono); font-size: 0.68rem; text-transform: uppercase; letter-spacing: 0.06em; color: var(--accent); display: block; margin-bottom: 6px; }
+  .callout.warn { border-left-color: var(--warm); }
+  .callout.warn .k { color: var(--warm); }
+  ul.plain { margin: 0; padding-left: 20px; color: var(--ink-soft); display: flex; flex-direction: column; gap: 6px; max-width: 76ch; }
+
+  .uc { background: var(--surface); border: 1px solid var(--line); border-radius: 8px; margin-bottom: 14px; box-shadow: var(--shadow); overflow: hidden; }
+  .uc-head { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 12px; padding: 12px 16px; background: var(--surface-2); border-bottom: 1px solid var(--line); }
+  .uc-id { font-family: var(--font-mono); font-size: 0.72rem; font-weight: 700; color: var(--accent); flex-shrink: 0; }
+  .uc-head h3 { font-size: 0.96rem; margin: 0; font-weight: 600; flex: 1 1 220px; }
+  .uc-route { font-family: var(--font-mono); font-size: 0.68rem; color: var(--ink-faint); background: var(--paper); border: 1px solid var(--line); border-radius: 4px; padding: 2px 6px; overflow-wrap: anywhere; }
+  .uc-body { display: grid; grid-template-columns: 128px minmax(0, 1fr); }
+  .uc-label { font-family: var(--font-mono); font-size: 0.64rem; letter-spacing: 0.05em; text-transform: uppercase; color: var(--ink-faint); padding: 10px 12px; border-top: 1px solid var(--line); background: var(--surface-2); }
+  .uc-value { font-size: 0.86rem; color: var(--ink-soft); padding: 10px 16px; border-top: 1px solid var(--line); min-width: 0; }
+  .uc-value strong { color: var(--ink); font-weight: 600; }
+  .uc-value ol { margin: 0; padding-left: 18px; display: flex; flex-direction: column; gap: 3px; }
+  .uc-value.alt { color: var(--warm); }
+  .uc-body > :nth-child(1), .uc-body > :nth-child(2) { border-top: none; }
+
+  @media (max-width: 880px) {
+    .shell { grid-template-columns: 1fr; }
+    aside { position: static; max-height: none; border-right: none; border-bottom: 1px solid var(--line); padding: 24px 20px; }
+    main { padding: 28px 20px 100px; }
+    .uc-body { grid-template-columns: 96px minmax(0, 1fr); }
+    .pkg-actors { margin-left: 0; }
+  }
+  ::selection { background: var(--accent-soft); }
+</style>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@500;600;700&amp;family=IBM+Plex+Sans:wght@400;500;600&amp;display=swap">
+</head>
+<body>
+<div class="shell">
+  <aside>
+    <div class="brand">Documento técnico<strong>ENGENOVA · Controle de EPIs</strong></div>
+    <nav class="toc" aria-label="Sumário">
+      <a href="#visao-geral"><span class="tag">—</span> Visão geral</a>
+      <a href="#s1"><span class="tag">01</span> Arquitetura da solução</a>
+      <a href="#s2"><span class="tag">02</span> Stack tecnológica</a>
+      <a href="#s3"><span class="tag">03</span> Camadas da API e erros</a>
+      <a href="#s4"><span class="tag">04</span> Modelo de dados</a>
+      <a href="#s5"><span class="tag">05</span> Entrega e concorrência</a>
+      <a href="#s6"><span class="tag">06</span> Autenticação</a>
+      <a href="#s7"><span class="tag">07</span> Autorização e escopo</a>
+      <a href="#s8"><span class="tag">08</span> Crachá, assinatura e comprovante</a>
+      <a href="#s9"><span class="tag">09</span> Estoque</a>
+      <a href="#s10"><span class="tag">10</span> Auditoria</a>
+      <a href="#s11"><span class="tag">11</span> Frontend</a>
+      <a href="#s12"><span class="tag">12</span> Testes e deploy</a>
+    </nav>
+    <div class="xlink">Ver também: <a href="casos-de-uso.html">Casos de uso →</a></div>
+  </aside>
+
+  <main>
+    <div id="visao-geral">
+      <div class="doc-kicker">Documentação técnica de arquitetura</div>
+      <h1>Controle de Entrega de EPIs — ENGENOVA</h1>
+    </div>
+    <div class="doc-meta"><span><strong>Express 5 / Prisma 7</strong> API</span><span><strong>React 19 / Vite 8</strong> web</span><span><strong>PostgreSQL 16</strong> banco</span><span>Monorepo pnpm + Turborepo</span><span>Rastreabilidade NR-6</span></div>
+    <section class="intro"><p>Este documento descreve como o sistema de entrega de Equipamentos de Proteção Individual da ENGENOVA é construído por dentro: arquitetura, modelo de dados, a transação de entrega, autenticação, escopo de dados e as decisões que garantem a rastreabilidade exigida pela NR-6.</p><p>O fluxo principal acontece no celular do almoxarife: identificar o colaborador (busca ou QR do crachá), escolher os EPIs, colher a <strong>assinatura na tela</strong> e registrar. A gestão (estoque por almoxarifado e local, EPIs e CAs, colaboradores, usuários) é pensada para o computador. A referência completa de rotas fica em <code>docs/api.md</code>; este documento explica o porquê das escolhas.</p></section>
+    <div class="sec" id="s1">
+      <div class="sec-head"><span class="sec-num">01</span><h2>Arquitetura da solução</h2></div>
+      <p>Web e API ficam no <strong>mesmo domínio</strong>, atrás de um proxy reverso: a SPA em <code>/</code> e a API em <code>/api</code>. Assim o refresh token pode viajar num cookie <code>httpOnly</code> com <code>SameSite=Strict</code>, sem CORS e sem token CSRF.</p>
+      <figure>
+        <div class="frame">
+          <pre class="mermaid">
+flowchart LR
+  U["Navegador<br/>celular ou desktop"] -->|"HTTPS"| NG["Nginx · TLS"]
+  NG -->|"/ · arquivos estáticos"| WEB["SPA React<br/>apps/web/dist"]
+  NG -->|"/api/*"| API["API Express 5<br/>127.0.0.1:3333"]
+  API -->|"Prisma 7 · adapter pg"| DB[("PostgreSQL 16")]
+  C["packages/contracts<br/>schemas Zod"] -.-> WEB
+  C -.-> API
+          </pre>
+        </div>
+        <figcaption>Topologia de produção. O HTTPS é obrigatório: o cookie de sessão é <code>Secure</code> e a câmera do leitor de QR só funciona em contexto seguro.</figcaption>
+      </figure>
+      <div class="table-wrap"><table>
+        <thead><tr><th>Pacote</th><th>Papel</th></tr></thead>
+        <tbody>
+          <tr><td class="mono">apps/web</td><td>SPA única e responsiva. Entrega mobile-first; gestão desktop-first.</td></tr>
+          <tr><td class="mono">apps/api</td><td>API REST, única dona das regras de negócio e da autorização.</td></tr>
+          <tr><td class="mono">packages/contracts</td><td>Enums, schemas Zod de request/response, códigos de erro e constantes. Fonte única usada pela API (validação) e pelo web (tipos e formulários).</td></tr>
+          <tr><td class="mono">packages/database</td><td>Prisma Client singleton.</td></tr>
+          <tr><td class="mono">packages/config</td><td>ESLint e tsconfig compartilhados.</td></tr>
+          <tr><td class="mono">database/prisma</td><td>Schema, migrations versionadas e seed.</td></tr>
+        </tbody>
+      </table></div>
+
+    </div>
+    <div class="sec" id="s2">
+      <div class="sec-head"><span class="sec-num">02</span><h2>Stack tecnológica</h2></div>
+      <div class="table-wrap"><table>
+        <thead><tr><th>Camada</th><th>Tecnologia</th><th>Por quê</th></tr></thead>
+        <tbody>
+          <tr><td><strong>Interface</strong></td><td class="mono">React 19 · TypeScript · Vite 8</td><td>Code splitting por rota; carga inicial perto de 190 KB de JS (gzip).</td></tr>
+          <tr><td><strong>Estilo</strong></td><td class="mono">Tailwind CSS 4 · motion 12</td><td>Design system próprio com tokens da marca e animações curtas.</td></tr>
+          <tr><td><strong>Dados e estado</strong></td><td class="mono">TanStack Query 5 · Zustand 5</td><td>Cache de servidor separado da sessão e do rascunho da entrega.</td></tr>
+          <tr><td><strong>Campo</strong></td><td class="mono">html5-qrcode · react-signature-canvas · qrcode</td><td>Leitura do crachá pela câmera, assinatura com o dedo e geração do QR do crachá.</td></tr>
+          <tr><td><strong>API</strong></td><td class="mono">Express 5 · Zod 4</td><td>Camadas simples, sem container de DI; validação com os mesmos schemas do web.</td></tr>
+          <tr><td><strong>Banco</strong></td><td class="mono">Prisma 7 (adapter pg) · PostgreSQL 16</td><td>Transações, <code>CHECK</code> de saldo e bloqueio de linha na baixa de estoque.</td></tr>
+          <tr><td><strong>Segurança</strong></td><td class="mono">jsonwebtoken · bcrypt 12 · helmet 8 · express-rate-limit</td><td>Sessão curta, refresh rotativo, limites por IP e bloqueio por conta.</td></tr>
+          <tr><td><strong>Testes</strong></td><td class="mono">Vitest 4 · Testing Library</td><td>Unitários, integração com banco real e componentes do web.</td></tr>
+        </tbody>
+      </table></div>
+
+    </div>
+    <div class="sec" id="s3">
+      <div class="sec-head"><span class="sec-num">03</span><h2>Camadas da API e erros</h2></div>
+      <p>Pragmático: nada de interfaces sem uma segunda implementação. Cada requisição atravessa quatro camadas.</p>
+      <div class="table-wrap"><table>
+        <thead><tr><th>Camada</th><th>Responsabilidade</th></tr></thead>
+        <tbody>
+          <tr><td class="mono">http/</td><td>Rotas, validação com os schemas do <code>contracts</code> e <code>authorize("ADMIN" | "ALMOXARIFADO")</code>; chama o caso de uso.</td></tr>
+          <tr><td class="mono">application/</td><td>Casos de uso (RegisterDelivery, AdjustStock, Login…): regras, orquestração e transações.</td></tr>
+          <tr><td class="mono">domain/</td><td>Tipos e regras puras: transições de situação, validade de CA, rascunho de entrega.</td></tr>
+          <tr><td class="mono">infra/</td><td>Repositórios Prisma.</td></tr>
+        </tbody>
+      </table></div>
+      <p>Todo erro sai no mesmo formato, <code>{ "error": { "code", "message", "details" } }</code>, com um <strong>código estável</strong> definido no <code>contracts</code>. O web decide pelo código, nunca pelo texto.</p>
+      <div class="table-wrap"><table>
+        <thead><tr><th>Código</th><th>HTTP</th><th>Quando</th></tr></thead>
+        <tbody>
+          <tr><td class="mono">ESTOQUE_INSUFICIENTE</td><td>409</td><td>Saldo menor que o pedido; <code>details</code> traz cada item com solicitado e disponível.</td></tr>
+          <tr><td class="mono">CA_INVALIDO</td><td>422</td><td>EPI sem Certificado de Aprovação vigente.</td></tr>
+          <tr><td class="mono">COLABORADOR_INDISPONIVEL</td><td>422</td><td>Colaborador não está <code>ATIVO</code>.</td></tr>
+          <tr><td class="mono">DEVOLUCAO_EXCEDE_ENTREGUE</td><td>422</td><td>Devolução maior que a quantidade pendente.</td></tr>
+          <tr><td class="mono">TRANSICAO_INVALIDA</td><td>422</td><td>Mudança de situação não permitida.</td></tr>
+          <tr><td class="mono">CONTA_BLOQUEADA</td><td>423</td><td>5 senhas erradas seguidas; bloqueio de 15 minutos.</td></tr>
+          <tr><td class="mono">SEM_PERMISSAO</td><td>403</td><td>Perfil sem acesso à rota ou almoxarifado fora do escopo.</td></tr>
+          <tr><td class="mono">NAO_ENCONTRADO</td><td>404</td><td>Registro inexistente ou fora do escopo, sem revelar que existe.</td></tr>
+        </tbody>
+      </table></div>
+
+    </div>
+    <div class="sec" id="s4">
+      <div class="sec-head"><span class="sec-num">04</span><h2>Modelo de dados</h2></div>
+      <figure>
+        <div class="frame">
+          <pre class="mermaid">
+erDiagram
+  COMPANY ||--o{ BUSINESS_UNIT : "possui"
+  BUSINESS_UNIT ||--o{ DEPARTMENT : "setores em árvore"
+  BUSINESS_UNIT ||--o{ WAREHOUSE : "possui"
+  BUSINESS_UNIT ||--o{ EMPLOYEE : "lota"
+  JOB_ROLE ||--o{ EMPLOYEE : "cargo"
+  USER ||--o{ USER_WAREHOUSE : "vinculado a"
+  WAREHOUSE ||--o{ USER_WAREHOUSE : "libera acesso"
+  EPI_CATEGORY ||--o{ EPI_ITEM : "agrupa"
+  EPI_ITEM ||--o{ EPI_CA : "certificados"
+  WAREHOUSE ||--o{ STOCK_ITEM : "guarda"
+  EPI_ITEM ||--o{ STOCK_ITEM : "variação"
+  STOCK_ITEM ||--o{ STOCK_MOVEMENT : "movimenta"
+  EMPLOYEE ||--o{ DELIVERY : "recebe"
+  DELIVERY ||--o{ DELIVERY_ITEM : "contém"
+  DELIVERY ||--|| DELIVERY_SIGNATURE : "assinada"
+  DELIVERY_ITEM ||--o{ EPI_RETURN : "devolução"
+  USER ||--o{ AUDIT_LOG : "registra"
+  STOCK_ITEM {
+    string size
+    string batchNumber
+    string location
+    int quantity "CHECK maior ou igual a 0"
+  }
+  STOCK_MOVEMENT {
+    enum type
+    int delta
+    int balanceBefore
+    int balanceAfter
+  }
+  DELIVERY {
+    int number
+    uuid idempotencyKey UK
+    enum reason
+  }
+  DELIVERY_SIGNATURE {
+    bytes png
+    string contentHash "SHA-256"
+  }
+  EMPLOYEE {
+    string cpf UK
+    string badgeCode UK
+    enum status
+  }
+          </pre>
+        </div>
+        <figcaption>Núcleo do modelo. <code>StockItem</code> é a unidade de saldo: uma linha por almoxarifado × EPI × tamanho × lote. Itens da entrega guardam um retrato do nome e do CA no momento da entrega.</figcaption>
+      </figure>
+      <div class="callout"><span class="k">Decisão notável</span><p>O saldo é materializado em <code>stock_items.quantity</code> e protegido por <code>CHECK (quantity &gt;= 0)</code>; toda alteração gera uma <code>StockMovement</code> com saldo anterior e posterior. O histórico explica cada número sem precisar recalcular nada.</p></div>
+
+    </div>
+    <div class="sec" id="s5">
+      <div class="sec-head"><span class="sec-num">05</span><h2>Entrega e concorrência</h2></div>
+      <p><code>POST /api/deliveries</code> é a operação central. Tudo acontece numa única transação: se qualquer passo falhar, nada é gravado.</p>
+      <figure>
+        <div class="frame">
+          <pre class="mermaid">
+sequenceDiagram
+  participant W as Web (celular)
+  participant A as API · RegisterDelivery
+  participant D as PostgreSQL
+  W->>A: POST /deliveries (idempotencyKey, itens, assinatura PNG)
+  A->>D: já existe entrega com esta idempotencyKey?
+  alt reenvio
+    D-->>A: entrega existente
+    A-->>W: 200 com a entrega já gravada
+  else nova entrega
+    A->>A: valida colaborador ATIVO e no escopo, EPI ativo, CA vigente
+    loop cada item
+      A->>D: UPDATE stock_items SET quantity = quantity - n WHERE id = x AND quantity >= n
+      alt nenhuma linha
+        A-->>W: 409 ESTOQUE_INSUFICIENTE (desfaz tudo)
+      end
+    end
+    A->>D: grava entrega, itens, movimentações, assinatura e auditoria
+    A-->>W: 201 com número e hash do comprovante
+  end
+          </pre>
+        </div>
+        <figcaption>O <code>UPDATE</code> condicional trava a linha do item no PostgreSQL. Duas entregas simultâneas do mesmo item ficam em fila, e a segunda só passa se ainda houver saldo. O <code>CHECK</code> é a rede de segurança final.</figcaption>
+      </figure>
+      <ul class="plain">
+        <li><strong>Idempotência</strong>: o web gera a <code>idempotencyKey</code> ao iniciar o fluxo. Se a conexão cair e o envio for repetido, a API devolve a entrega já gravada em vez de duplicar.</li>
+        <li><strong>Limites</strong>: 1 a 20 EPIs distintos por entrega, 1 a 50 unidades por EPI, cada item de estoque uma vez só; motivo <code>OUTRO</code> exige detalhe.</li>
+        <li><strong>Imutável</strong>: a entrega não é editada depois de registrada. Correções acontecem por devolução, que também gera movimentação e auditoria.</li>
+        <li><strong>Troca prevista</strong>: com <code>usefulLifeDays</code> no EPI, cada item entregue ganha a data prevista de substituição.</li>
+        <li>O web nunca calcula saldo para enviar; apenas exibe o saldo informado pela API.</li>
+      </ul>
+
+    </div>
+    <div class="sec" id="s6">
+      <div class="sec-head"><span class="sec-num">06</span><h2>Autenticação</h2></div>
+      <div class="table-wrap"><table>
+        <thead><tr><th>Item</th><th>Implementação</th></tr></thead>
+        <tbody>
+          <tr><td><strong>Senhas</strong></td><td>bcrypt custo 12, mínimo de 10 caracteres. Senha definida pelo ADMIN é provisória: troca obrigatória no primeiro acesso.</td></tr>
+          <tr><td><strong>Access token</strong></td><td>JWT HS256 de 15 minutos com <code>iss</code>/<code>aud</code> fixos, guardado <strong>só em memória</strong> no navegador.</td></tr>
+          <tr><td><strong>Revogação imediata</strong></td><td>Cada requisição confere se o usuário está ativo e se o <code>tokenVersion</code> confere. Desativar, trocar perfil, almoxarifados ou senha derruba as sessões na hora.</td></tr>
+          <tr><td><strong>Refresh token</strong></td><td>Opaco (384 bits), 7 dias, cookie <code>httpOnly</code> + <code>Secure</code> + <code>SameSite=Strict</code> + <code>Path=/api/auth</code>. No banco, só o SHA-256.</td></tr>
+          <tr><td><strong>Rotação</strong></td><td>Atômica (<code>UPDATE … WHERE revoked_at IS NULL</code>). Reapresentar um token já usado, fora da janela de 30 s, revoga todas as sessões do usuário e gera auditoria.</td></tr>
+          <tr><td><strong>Força bruta</strong></td><td>5 falhas → conta bloqueada por 15 minutos (no banco), mais limite por IP: login 50 e refresh 300 a cada 15 minutos.</td></tr>
+          <tr><td><strong>Enumeração</strong></td><td>E-mail inexistente compara contra um hash real: mesmo tempo e mesma mensagem de senha errada.</td></tr>
+        </tbody>
+      </table></div>
+      <p>No web, várias requisições que recebem 401 ao mesmo tempo esperam uma única renovação (single-flight).</p>
+
+    </div>
+    <div class="sec" id="s7">
+      <div class="sec-head"><span class="sec-num">07</span><h2>Autorização e escopo</h2></div>
+      <p>Dois perfis: <code>ADMIN</code> e <code>ALMOXARIFADO</code>. Cada rota declara os perfis aceitos no backend; esconder um botão no web é só conveniência.</p>
+      <ul class="plain">
+        <li><strong>Escopo de dados</strong>: o almoxarife só acessa os almoxarifados vinculados ao seu usuário (<code>UserWarehouse</code>) e os colaboradores das unidades desses almoxarifados. Fora do escopo, a resposta é <strong>404</strong>, que não revela que o registro existe.</li>
+        <li><strong>Minimização</strong>: o almoxarife recebe o CPF mascarado (<code>***.456.789-**</code>) e não recebe o código do crachá. A leitura por QR devolve só a visão mínima do colaborador.</li>
+        <li><strong>Somente ADMIN</strong>: usuários, empresas, unidades, setores, cargos, criação de almoxarifados e cadastro de colaboradores.</li>
+      </ul>
+
+    </div>
+    <div class="sec" id="s8">
+      <div class="sec-head"><span class="sec-num">08</span><h2>Crachá, assinatura e comprovante</h2></div>
+      <ul class="plain">
+        <li><strong>QR do crachá</strong>: contém apenas um código aleatório de 144 bits (<code>badgeCode</code>), sem CPF, matrícula ou ID. Só a API resolve o código, para usuário autenticado e dentro do escopo. Reemitir invalida o anterior, para o caso de crachá perdido.</li>
+        <li><strong>Assinatura</strong>: PNG validado pelos <em>magic bytes</em> (não basta o prefixo <code>data:image/png</code>), até 300 KB. É servida sempre como <code>image/png</code>, com <code>Content-Security-Policy: default-src 'none'</code> e <code>Cache-Control: private, no-store</code>.</li>
+        <li><strong>Integridade</strong>: o SHA-256 do conteúdo canônico da entrega mais a imagem é gravado e exibido no comprovante. Qualquer alteração posterior mudaria o hash.</li>
+        <li><strong>Corpo da requisição</strong>: 100 KB no geral; 512 KB só em <code>/api/deliveries</code>, por causa da assinatura.</li>
+      </ul>
+
+    </div>
+    <div class="sec" id="s9">
+      <div class="sec-head"><span class="sec-num">09</span><h2>Estoque</h2></div>
+      <ul class="plain">
+        <li><strong>Entrada</strong>: cria a variação (almoxarifado × EPI × tamanho × lote) se ela não existir e soma o saldo com uma movimentação <code>ENTRADA</code>. Tamanho é normalizado em maiúsculas.</li>
+        <li><strong>Ajustes</strong>: saída, perda ou avaria informam a quantidade retirada; o inventário (<code>AJUSTE</code>) informa o saldo <em>contado</em> e a API calcula a diferença.</li>
+        <li><strong>Local de armazenamento</strong>: texto livre de até 60 caracteres (com <code>CHECK</code> no banco), alterado sem mexer no saldo e auditado com o valor anterior e o novo. Aparece também na seleção de EPIs da entrega, para facilitar a separação.</li>
+        <li><strong>Na tela</strong>, as variações são agrupadas num card por equipamento, com filtros de modelo e tamanho e uma visão "Por local", sem mudar o modelo de dados.</li>
+        <li><strong>Tipos de movimentação</strong>: <code>ENTRADA</code>, <code>SAIDA</code>, <code>ENTREGA</code>, <code>DEVOLUCAO</code>, <code>AJUSTE</code>, <code>PERDA</code> e <code>AVARIA</code>.</li>
+      </ul>
+
+    </div>
+    <div class="sec" id="s10">
+      <div class="sec-head"><span class="sec-num">10</span><h2>Auditoria</h2></div>
+      <p><code>audit_logs</code> registra quem, quando, o quê, qual registro, o estado anterior e o posterior (sem hash de senha), IP e user-agent. A gravação acontece <strong>na mesma transação</strong> da operação: não existe alteração sem rastro.</p>
+      <p>Eventos cobertos: login (sucesso, falha, bloqueio), logout, reuso de sessão, troca e redefinição de senha, cadastros, mudanças de situação e de permissões, reemissão de crachá, cancelamento de CA, entradas e ajustes de estoque, mudança de local, entregas e devoluções.</p>
+
+    </div>
+    <div class="sec" id="s11">
+      <div class="sec-head"><span class="sec-num">11</span><h2>Frontend</h2></div>
+      <div class="table-wrap"><table>
+        <thead><tr><th>Tipo de estado</th><th>Ferramenta</th></tr></thead>
+        <tbody>
+          <tr><td>Dados do servidor (listas, detalhes, saldos)</td><td>TanStack Query</td></tr>
+          <tr><td>Sessão (usuário e access token)</td><td>Store Zustand, fora do React Query</td></tr>
+          <tr><td>Rascunho da entrega entre as etapas</td><td>Zustand (<code>features/deliveries/draft</code>), zerado a cada nova entrega</td></tr>
+          <tr><td>UI local (busca, abas)</td><td><code>useState</code></td></tr>
+        </tbody>
+      </table></div>
+      <ul class="plain">
+        <li><strong>Início por tipo de tela</strong>: em telas largas, painel com resumo, últimos 7 dias, entregas recentes e alertas de estoque e local; no celular, a tela de início com atalhos de campo. As duas leem o mesmo <code>GET /dashboard/summary</code>.</li>
+        <li><strong>Estados explícitos</strong> em toda operação: carregando, vazio, erro com "Tentar novamente" e sucesso; botões de envio ficam desabilitados durante a requisição.</li>
+        <li><strong>Code splitting</strong>: leitor de QR, assinatura e gerador de QR carregam só nas telas que os usam.</li>
+        <li><strong>Acessibilidade</strong>: rótulos associados, foco visível, alvos de toque de pelo menos 44 px, contraste AA calculado para a paleta e <code>aria-live</code> nos avisos.</li>
+      </ul>
+
+    </div>
+    <div class="sec" id="s12">
+      <div class="sec-head"><span class="sec-num">12</span><h2>Testes e deploy</h2></div>
+      <div class="table-wrap"><table>
+        <thead><tr><th>Nível</th><th>Onde</th><th>O que cobre</th></tr></thead>
+        <tbody>
+          <tr><td>Unitário (domínio)</td><td class="mono">apps/api/src/**/*.spec.ts</td><td>Autenticação, transições de situação, CA vigente, hash da assinatura, ciclo de setores.</td></tr>
+          <tr><td>Integração (API + banco)</td><td class="mono">apps/api/test/integration</td><td>Concorrência de estoque, transações, idempotência, constraints, autorização e escopo.</td></tr>
+          <tr><td>Contratos</td><td class="mono">packages/contracts</td><td>CPF e regras da entrega.</td></tr>
+          <tr><td>Web</td><td class="mono">apps/web/src/**/*.test.tsx</td><td>Cliente HTTP (refresh single-flight), guardas, rascunho e etapas da entrega, agrupamento do estoque.</td></tr>
+        </tbody>
+      </table></div>
+      <p>Produção (detalhes em <code>docs/deploy.md</code>): Linux com Node.js 22 e pnpm 9, PostgreSQL 16, a API como serviço <code>systemd</code> e o Nginx servindo a SPA e repassando <code>/api</code>. Uma máquina de 1 vCPU e 1–2 GB de RAM atende um almoxarifado com folga.</p>
+      <div class="callout warn"><span class="k">Riscos conhecidos</span><p>O limite por IP fica em memória: com mais de uma instância da API, é preciso uma store compartilhada. Ainda não há recuperação de senha por e-mail (o ADMIN redefine). Falta definir a política de retenção (LGPD) para assinaturas, fotos e logs.</p></div>
+
+    </div>
+
+  </main>
+</div>
+<script type="module">
+  import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@10.9.1/dist/mermaid.esm.min.mjs";
+  const dark = window.matchMedia("(prefers-color-scheme: dark)").matches;
+  mermaid.initialize({ startOnLoad: true, theme: dark ? "dark" : "neutral", fontFamily: "IBM Plex Mono, monospace" });
+</script>
+</body>
+</html>

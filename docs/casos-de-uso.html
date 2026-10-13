@@ -1,0 +1,411 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Casos de Uso do Controle de EPIs</title>
+<style>
+  /* Layout: índice fixo à esquerda, documento à direita; uma coluna no celular. */
+  :root {
+    --paper: #eef1f5; --surface: #ffffff; --surface-2: #f5f7fa; --line: #d7dde6;
+    --ink: #131c2e; --ink-soft: #55647d; --ink-faint: #75849c;
+    --accent: #2454c7; --accent-soft: #e4ecfc; --warm: #a8571c; --warm-soft: #fbeadd; --good: #0f8a6b;
+    --chip-ink: #ffffff;
+    --a1: #2454c7; --a2: #0f8a6b; --a3: #a8571c; --a4: #6b5bd6; --a5: #b4235a; --a6: #0f7a94; --a7: #5a6478; --a8: #7a5c00;
+    --shadow: 0 1px 2px rgba(19,28,46,0.06), 0 8px 24px -12px rgba(19,28,46,0.18);
+    --font-sans: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+    --font-mono: "IBM Plex Mono", ui-monospace, "Cascadia Code", Consolas, monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --paper: #0d1220; --surface: #141b2c; --surface-2: #182035; --line: #29334a;
+      --ink: #e8ecf5; --ink-soft: #a7b2c8; --ink-faint: #7f8aa5;
+      --accent: #6c93ff; --accent-soft: #1c2740; --warm: #e0965a; --warm-soft: #2c2113; --good: #4fd3a8;
+      --chip-ink: #0d1220;
+      --a1: #6c93ff; --a2: #4fd3a8; --a3: #e0965a; --a4: #b0a1f5; --a5: #f07fa8; --a6: #5cc8e0; --a7: #a7b2c8; --a8: #d9b44a;
+      --shadow: 0 1px 2px rgba(0,0,0,0.3), 0 8px 24px -12px rgba(0,0,0,0.5);
+      color-scheme: dark;
+    }
+  }
+  :root[data-theme="dark"] {
+    --paper: #0d1220; --surface: #141b2c; --surface-2: #182035; --line: #29334a;
+    --ink: #e8ecf5; --ink-soft: #a7b2c8; --ink-faint: #7f8aa5;
+    --accent: #6c93ff; --accent-soft: #1c2740; --warm: #e0965a; --warm-soft: #2c2113; --good: #4fd3a8;
+    --chip-ink: #0d1220;
+    --a1: #6c93ff; --a2: #4fd3a8; --a3: #e0965a; --a4: #b0a1f5; --a5: #f07fa8; --a6: #5cc8e0; --a7: #a7b2c8; --a8: #d9b44a;
+    --shadow: 0 1px 2px rgba(0,0,0,0.3), 0 8px 24px -12px rgba(0,0,0,0.5);
+    color-scheme: dark;
+  }
+
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--paper); color: var(--ink); font-family: var(--font-sans); font-size: 15px; line-height: 1.6; }
+  h1, h2, h3, h4, .mono { font-family: var(--font-mono); }
+  h1, h2, h3 { text-wrap: balance; color: var(--ink); }
+  code { font-family: var(--font-mono); background: var(--surface-2); border: 1px solid var(--line); border-radius: 4px; padding: 1px 5px; font-size: 0.86em; overflow-wrap: anywhere; }
+  a { color: var(--accent); }
+  a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 3px; }
+
+  .shell { display: grid; grid-template-columns: 250px minmax(0, 1fr); max-width: 1220px; margin: 0 auto; align-items: start; }
+  aside { position: sticky; top: env(safe-area-inset-top, 0px); max-height: 100vh; overflow-y: auto; padding: 28px 18px 28px 28px; border-right: 1px solid var(--line); }
+  .brand { font-size: 0.68rem; letter-spacing: 0.09em; text-transform: uppercase; color: var(--ink-faint); }
+  .brand strong { display: block; font-size: 0.92rem; letter-spacing: 0.02em; color: var(--accent); margin-top: 4px; text-transform: none; }
+  nav.toc { margin-top: 26px; display: flex; flex-direction: column; gap: 2px; }
+  nav.toc a { display: flex; gap: 8px; align-items: baseline; padding: 6px 10px; border-radius: 6px; color: var(--ink-soft); text-decoration: none; font-size: 0.82rem; }
+  nav.toc a:hover { background: var(--surface-2); color: var(--ink); }
+  nav.toc .tag { font-family: var(--font-mono); font-size: 0.68rem; color: var(--ink-faint); min-width: 20px; }
+  .actors { margin-top: 22px; padding-top: 16px; border-top: 1px solid var(--line); display: flex; flex-direction: column; gap: 6px; }
+  .actor-key { display: flex; align-items: center; gap: 8px; font-size: 0.76rem; color: var(--ink-soft); }
+  .actor-dot { width: 9px; height: 9px; border-radius: 50%; flex-shrink: 0; }
+  .xlink { margin-top: 22px; padding-top: 16px; border-top: 1px solid var(--line); font-size: 0.78rem; color: var(--ink-soft); }
+
+  main { padding: 40px 40px 120px; min-width: 0; }
+  .doc-kicker { font-family: var(--font-mono); font-size: 0.72rem; letter-spacing: 0.12em; text-transform: uppercase; color: var(--accent); font-weight: 600; }
+  h1 { font-size: 1.9rem; margin: 6px 0 10px; font-weight: 700; line-height: 1.25; }
+  .doc-meta { display: flex; flex-wrap: wrap; gap: 8px 18px; font-size: 0.78rem; color: var(--ink-faint); padding-bottom: 24px; border-bottom: 1px solid var(--line); margin-bottom: 32px; }
+  .doc-meta strong { color: var(--ink-soft); }
+  section.intro p { max-width: 70ch; color: var(--ink-soft); margin: 0 0 14px; }
+  section.intro p:first-of-type { color: var(--ink); }
+
+  .sec, .pkg { margin-top: 52px; scroll-margin-top: 24px; }
+  .sec-head, .pkg-head { display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px 12px; padding-bottom: 10px; border-bottom: 2px solid var(--ink); margin-bottom: 18px; }
+  .sec-num, .pkg-num { font-family: var(--font-mono); font-size: 0.78rem; color: var(--accent); font-weight: 700; }
+  .sec-head h2, .pkg-head h2 { font-size: 1.24rem; margin: 0; }
+  .sec p { max-width: 74ch; color: var(--ink-soft); }
+  .sec p strong, ul.plain strong { color: var(--ink); }
+  .pkg-actors { display: flex; flex-wrap: wrap; gap: 6px; margin-left: auto; }
+  .pkg-note { color: var(--ink-faint); font-size: 0.84rem; max-width: 70ch; margin: 10px 0 20px; }
+  .actor-chip { font-family: var(--font-mono); font-size: 0.66rem; letter-spacing: 0.03em; padding: 2px 8px; border-radius: 999px; color: var(--chip-ink); white-space: nowrap; }
+
+  figure { margin: 24px 0 32px; }
+  figure .frame { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 20px; box-shadow: var(--shadow); overflow-x: auto; }
+  figure pre.mermaid { margin: 0; display: flex; justify-content: center; font-family: var(--font-mono); font-size: 0.8rem; color: var(--ink-soft); }
+  figcaption { margin-top: 10px; font-size: 0.8rem; color: var(--ink-faint); max-width: 74ch; }
+
+  .table-wrap { overflow-x: auto; margin: 18px 0 28px; }
+  table { width: 100%; border-collapse: collapse; background: var(--surface); border: 1px solid var(--line); border-radius: 8px; overflow: hidden; box-shadow: var(--shadow); font-size: 0.86rem; }
+  th, td { text-align: left; padding: 10px 14px; border-bottom: 1px solid var(--line); vertical-align: top; }
+  th { background: var(--surface-2); font-family: var(--font-mono); font-size: 0.7rem; letter-spacing: 0.04em; text-transform: uppercase; color: var(--ink-faint); white-space: nowrap; }
+  td { color: var(--ink-soft); }
+  td strong { color: var(--ink); }
+  tr:last-child td { border-bottom: none; }
+  td.mono { font-family: var(--font-mono); font-size: 0.8rem; color: var(--ink); white-space: nowrap; }
+  .pill { display: inline-block; font-family: var(--font-mono); font-size: 0.66rem; padding: 2px 7px; border-radius: 999px; background: var(--accent-soft); color: var(--accent); white-space: nowrap; margin: 1px 0; }
+  .pill.warm { background: var(--warm-soft); color: var(--warm); }
+  .same { color: var(--good); font-family: var(--font-mono); font-size: 0.74rem; white-space: nowrap; }
+
+  .callout { background: var(--surface); border: 1px solid var(--line); border-left: 3px solid var(--accent); border-radius: 0 8px 8px 0; padding: 14px 18px; margin: 18px 0; box-shadow: var(--shadow); max-width: 80ch; }
+  .callout p { margin: 0; color: var(--ink-soft); }
+  .callout .k { font-family: var(--font-mono); font-size: 0.68rem; text-transform: uppercase; letter-spacing: 0.06em; color: var(--accent); display: block; margin-bottom: 6px; }
+  .callout.warn { border-left-color: var(--warm); }
+  .callout.warn .k { color: var(--warm); }
+  ul.plain { margin: 0; padding-left: 20px; color: var(--ink-soft); display: flex; flex-direction: column; gap: 6px; max-width: 76ch; }
+
+  .uc { background: var(--surface); border: 1px solid var(--line); border-radius: 8px; margin-bottom: 14px; box-shadow: var(--shadow); overflow: hidden; }
+  .uc-head { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 12px; padding: 12px 16px; background: var(--surface-2); border-bottom: 1px solid var(--line); }
+  .uc-id { font-family: var(--font-mono); font-size: 0.72rem; font-weight: 700; color: var(--accent); flex-shrink: 0; }
+  .uc-head h3 { font-size: 0.96rem; margin: 0; font-weight: 600; flex: 1 1 220px; }
+  .uc-route { font-family: var(--font-mono); font-size: 0.68rem; color: var(--ink-faint); background: var(--paper); border: 1px solid var(--line); border-radius: 4px; padding: 2px 6px; overflow-wrap: anywhere; }
+  .uc-body { display: grid; grid-template-columns: 128px minmax(0, 1fr); }
+  .uc-label { font-family: var(--font-mono); font-size: 0.64rem; letter-spacing: 0.05em; text-transform: uppercase; color: var(--ink-faint); padding: 10px 12px; border-top: 1px solid var(--line); background: var(--surface-2); }
+  .uc-value { font-size: 0.86rem; color: var(--ink-soft); padding: 10px 16px; border-top: 1px solid var(--line); min-width: 0; }
+  .uc-value strong { color: var(--ink); font-weight: 600; }
+  .uc-value ol { margin: 0; padding-left: 18px; display: flex; flex-direction: column; gap: 3px; }
+  .uc-value.alt { color: var(--warm); }
+  .uc-body > :nth-child(1), .uc-body > :nth-child(2) { border-top: none; }
+
+  @media (max-width: 880px) {
+    .shell { grid-template-columns: 1fr; }
+    aside { position: static; max-height: none; border-right: none; border-bottom: 1px solid var(--line); padding: 24px 20px; }
+    main { padding: 28px 20px 100px; }
+    .uc-body { grid-template-columns: 96px minmax(0, 1fr); }
+    .pkg-actors { margin-left: 0; }
+  }
+  ::selection { background: var(--accent-soft); }
+</style>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@500;600;700&amp;family=IBM+Plex+Sans:wght@400;500;600&amp;display=swap">
+</head>
+<body>
+<div class="shell">
+  <aside>
+    <div class="brand">Casos de uso<strong>ENGENOVA · Controle de EPIs</strong></div>
+    <nav class="toc" aria-label="Sumário">
+      <a href="#visao-geral"><span class="tag">—</span> Visão geral</a>
+      <a href="#diagrama"><span class="tag">—</span> Diagrama de contexto</a>
+      <a href="#pkg-1"><span class="tag">01</span> Sessão</a>
+      <a href="#pkg-2"><span class="tag">02</span> Entrega de EPI</a>
+      <a href="#pkg-3"><span class="tag">03</span> Histórico e devolução</a>
+      <a href="#pkg-4"><span class="tag">04</span> Estoque</a>
+      <a href="#pkg-5"><span class="tag">05</span> EPIs e CAs</a>
+      <a href="#pkg-6"><span class="tag">06</span> Colaboradores</a>
+      <a href="#pkg-7"><span class="tag">07</span> Organização</a>
+      <a href="#pkg-8"><span class="tag">08</span> Usuários</a>
+      <a href="#pkg-9"><span class="tag">09</span> Painel</a>
+      <a href="#pkg-10"><span class="tag">10</span> Processos automáticos</a>
+    </nav>
+    <div class="actors">
+      <div class="actor-key"><span class="actor-dot" style="background:var(--a3)"></span> Administrador</div>
+      <div class="actor-key"><span class="actor-dot" style="background:var(--a2)"></span> Almoxarife</div>
+      <div class="actor-key"><span class="actor-dot" style="background:var(--a1)"></span> Colaborador</div>
+      <div class="actor-key"><span class="actor-dot" style="background:var(--a4)"></span> Sistema</div>
+    </div>
+    <div class="xlink">Ver também: <a href="documentacao-tecnica.html">Documentação técnica →</a></div>
+  </aside>
+
+  <main>
+    <div id="visao-geral">
+      <div class="doc-kicker">Especificação de casos de uso</div>
+      <h1>Controle de Entrega de EPIs — ENGENOVA</h1>
+    </div>
+    <div class="doc-meta"><span><strong>46</strong> casos de uso</span><span><strong>4</strong> atores</span><span><strong>10</strong> pacotes</span><span>Base: rotas e regras de docs/api.md e do código em apps/api</span></div>
+    <section class="intro"><p>Este documento especifica os casos de uso do sistema de entrega de EPIs da ENGENOVA. Cada caso corresponde a uma rota e a uma regra implementadas; nada aqui descreve intenção futura.</p><p>Dois perfis operam o sistema: o <strong>Almoxarife</strong>, restrito aos almoxarifados vinculados ao seu usuário, e o <strong>Administrador</strong>, com acesso total. O <strong>Colaborador</strong> não faz login: participa da entrega assinando na tela do almoxarife. O <strong>Sistema</strong> executa as garantias automáticas de estoque, auditoria e sessão.</p></section>
+    <figure id="diagrama">
+      <div class="frame">
+        <pre class="mermaid">
+flowchart LR
+  COL(("Colaborador")) -->|"apresenta crachá e assina"| ENT["Entrega de EPI"]
+  ALM(("Almoxarife")) --> ENT
+  ALM --> EST["Estoque dos seus almoxarifados"]
+  ALM --> CAT["EPIs e CAs"]
+  ALM --> HIS["Histórico e devoluções"]
+  ADM(("Administrador")) --> ENT
+  ADM --> EST
+  ADM --> ORG["Organização, colaboradores e usuários"]
+  SIS[["Sistema"]] -.->|"baixa saldo e audita"| ENT
+  SIS -.->|"bloqueia e revoga sessões"| SES["Sessão"]
+        </pre>
+      </div>
+      <figcaption>Quem atua em cada parte do sistema. O Almoxarife nunca alcança a organização e os usuários; o Administrador acumula tudo. Linhas tracejadas são ações automáticas do Sistema.</figcaption>
+    </figure>
+    <div class="pkg" id="pkg-1">
+      <div class="pkg-head"><span class="pkg-num">PACOTE 01</span><h2>Sessão</h2><div class="pkg-actors"><span class="actor-chip" style="background:var(--a3)">ADMIN</span><span class="actor-chip" style="background:var(--a2)">ALMOXARIFE</span></div></div>
+      <div class="uc">
+        <div class="uc-head"><span class="uc-id">UC01</span><h3>Entrar no sistema</h3><span class="uc-route">POST /api/auth/login</span></div>
+        <div class="uc-body"><div class="uc-label">Pré-condição</div><div class="uc-value">Usuário ativo e não bloqueado.</div><div class="uc-label">Pós-condição</div><div class="uc-value">Access token em memória e refresh token em cookie <code>httpOnly</code>.</div><div class="uc-label">Fluxo principal</div><div class="uc-value"><ol><li>Usuário informa e-mail e senha.</li><li>Sistema confere o hash e registra o acesso.</li><li>Sistema devolve o usuário com perfil, almoxarifados e se a troca de senha é obrigatória.</li></ol></div><div class="uc-label">Exceção</div><div class="uc-value alt">Senha errada → <code>CREDENCIAIS_INVALIDAS</code>, a mesma resposta para e-mail inexistente. 5 falhas seguidas → <code>CONTA_BLOQUEADA</code> por 15 minutos.</div></div>
+      </div>
+      <div class="uc">
+        <div class="uc-head"><span class="uc-id">UC02</span><h3>Trocar senha (inclusive no primeiro acesso)</h3><span class="uc-route">POST /api/auth/change-password</span></div>
+        <div class="uc-body"><div class="uc-label">Pré-condição</div><div class="uc-value">Usuário autenticado.</div><div class="uc-label">Pós-condição</div><div class="uc-value">Nova senha gravada; sessão nova e as demais revogadas.</div><div class="uc-label">Fluxo principal</div><div class="uc-value"><ol><li>Com senha provisória, o web leva direto à troca.</li><li>Usuário informa a senha atual e a nova (mínimo 10 caracteres).</li><li>Sistema grava e emite uma sessão nova.</li></ol></div><div class="uc-label">Exceção</div><div class="uc-value alt">Senha atual errada → <code>SENHA_ATUAL_INCORRETA</code>.</div></div>
+      </div>
+      <div class="uc">
+        <div class="uc-head"><span class="uc-id">UC03</span><h3>Renovar a sessão</h3><span class="uc-route">POST /api/auth/refresh</span></div>
+        <div class="uc-body"><div class="uc-label">Pré-condição</div><div class="uc-value">Cookie de refresh válido.</div><div class="uc-label">Pós-condição</div><div class="uc-value">Novo access token e refresh rotacionado.</div><div class="uc-label">Fluxo principal</div><div class="uc-value"><ol><li>O web renova antes de expirar ou ao receber 401, uma renovação por vez.</li><li>Sistema revoga o refresh usado e grava o novo.</li></ol></div><div class="uc-label">Exceção</div><div class="uc-value alt">Token já usado fora da janela de 30 s → todas as sessões do usuário são revogadas (UC46).</div></div>
+      </div>
+      <div class="uc">
+        <div class="uc-head"><span class="uc-id">UC04</span><h3>Consultar a própria sessão</h3><span class="uc-route">GET /api/auth/me</span></div>
+        <div class="uc-body"><div class="uc-label">Pré-condição</div><div class="uc-value">Usuário autenticado.</div><div class="uc-label">Pós-condição</div><div class="uc-value">Dados do usuário e almoxarifados vinculados.</div><div class="uc-label">Fluxo principal</div><div class="uc-value"><ol><li>O web consulta ao carregar e monta o menu conforme o perfil.</li></ol></div></div>
+      </div>
+      <div class="uc">
+        <div class="uc-head"><span class="uc-id">UC05</span><h3>Sair</h3><span class="uc-route">POST /api/auth/logout</span></div>
+        <div class="uc-body"><div class="uc-label">Pré-condição</div><div class="uc-value">Usuário autenticado.</div><div class="uc-label">Pós-condição</div><div class="uc-value">Refresh revogado, cookie apagado e cache do web limpo.</div><div class="uc-label">Fluxo principal</div><div class="uc-value"><ol><li>Usuário sai.</li><li>Sistema revoga o token e o web descarta todos os dados em memória.</li></ol></div></div>
+      </div>
+    </div>
+    <div class="pkg" id="pkg-2">
+      <div class="pkg-head"><span class="pkg-num">PACOTE 02</span><h2>Entrega de EPI</h2><div class="pkg-actors"><span class="actor-chip" style="background:var(--a3)">ADMIN</span><span class="actor-chip" style="background:var(--a2)">ALMOXARIFE</span><span class="actor-chip" style="background:var(--a1)">COLABORADOR</span></div></div>
+      <p class="pkg-note">O fluxo principal, pensado para o celular. Escopo: almoxarifados do usuário e colaboradores das unidades desses almoxarifados.</p>
+      <div class="uc">
+        <div class="uc-head"><span class="uc-id">UC06</span><h3>Identificar colaborador pela busca</h3><span class="uc-route">GET /api/employees?q=</span></div>
+        <div class="uc-body"><div class="uc-label">Pré-condição</div><div class="uc-value">Usuário autenticado.</div><div class="uc-label">Pós-condição</div><div class="uc-value">Colaborador escolhido para a entrega.</div><div class="uc-label">Fluxo principal</div><div class="uc-value"><ol><li>Almoxarife digita parte do nome ou a matrícula.</li><li>Sistema devolve só colaboradores do seu escopo, na visão mínima.</li></ol></div></div>
+      </div>
+      <div class="uc">
+        <div class="uc-head"><span class="uc-id">UC07</span><h3>Identificar colaborador pelo QR do crachá</h3><span class="uc-route">GET /api/employees/by-badge/:code</span></div>
+        <div class="uc-body"><div class="uc-label">Pré-condição</div><div class="uc-value">Câmera disponível em HTTPS; crachá emitido.</div><div class="uc-label">Pós-condição</div><div class="uc-value">Colaborador identificado sem digitar.</div><div class="uc-label">Fluxo principal</div><div class="uc-value"><ol><li>Almoxarife aponta a câmera para o crachá.</li><li>Web lê o código e consulta a API.</li><li>Sistema resolve o código dentro do escopo.</li></ol></div><div class="uc-label">Exceção</div><div class="uc-value alt">Crachá reemitido (código antigo) ou fora do escopo → <code>NAO_ENCONTRADO</code>.</div></div>
+      </div>
+      <div class="uc">
+        <div class="uc-head"><span class="uc-id">UC08</span><h3>Conferir colaborador e escolher EPIs</h3><span class="uc-route">GET /api/stock/items?available=true</span></div>
+        <div class="uc-body"><div class="uc-label">Pré-condição</div><div class="uc-value">Colaborador <code>ATIVO</code>.</div><div class="uc-label">Pós-condição</div><div class="uc-value">Itens e quantidades no rascunho da entrega.</div><div class="uc-label">Fluxo principal</div><div class="uc-value"><ol><li>Almoxarife confere foto, cargo e setor.</li><li>Escolhe os EPIs com saldo, vendo tamanho, lote, CA e local.</li><li>Informa a quantidade de cada um (1 a 50) e observações.</li></ol></div></div>
+      </div>
+      <div class="uc">
+        <div class="uc-head"><span class="uc-id">UC09</span><h3>Informar o motivo</h3></div>
+        <div class="uc-body"><div class="uc-label">Pré-condição</div><div class="uc-value">Rascunho com itens.</div><div class="uc-label">Pós-condição</div><div class="uc-value">Motivo registrado no rascunho.</div><div class="uc-label">Fluxo principal</div><div class="uc-value"><ol><li>Almoxarife escolhe desgaste, dano, rotina, atividade especial, perda, extravio, novo colaborador ou outro.</li></ol></div><div class="uc-label">Exceção</div><div class="uc-value alt">Motivo "outro" sem detalhe → <code>VALIDACAO</code>.</div></div>
+      </div>
+      <div class="uc">
+        <div class="uc-head"><span class="uc-id">UC10</span><h3>Assinar o recebimento</h3></div>
+        <div class="uc-body"><div class="uc-label">Pré-condição</div><div class="uc-value">Rascunho completo.</div><div class="uc-label">Pós-condição</div><div class="uc-value">Assinatura em PNG anexada ao rascunho.</div><div class="uc-label">Fluxo principal</div><div class="uc-value"><ol><li>Colaborador confere os itens na tela.</li><li>Assina com o dedo no celular do almoxarife.</li></ol></div></div>
+      </div>
+      <div class="uc">
+        <div class="uc-head"><span class="uc-id">UC11</span><h3>Registrar a entrega</h3><span class="uc-route">POST /api/deliveries</span></div>
+        <div class="uc-body"><div class="uc-label">Pré-condição</div><div class="uc-value">Rascunho com itens, motivo e assinatura.</div><div class="uc-label">Pós-condição</div><div class="uc-value">Entrega numerada, saldo baixado e comprovante com hash.</div><div class="uc-label">Fluxo principal</div><div class="uc-value"><ol><li>Web envia o rascunho com a <code>idempotencyKey</code>.</li><li>Sistema valida colaborador, EPI ativo e CA vigente.</li><li>Sistema baixa cada item e grava tudo numa transação (UC42).</li><li>Web mostra o número da entrega e o hash do comprovante.</li></ol></div><div class="uc-label">Exceção</div><div class="uc-value alt"><code>ESTOQUE_INSUFICIENTE</code> (com os itens em falta), <code>CA_INVALIDO</code>, <code>EPI_INATIVO</code> ou <code>COLABORADOR_INDISPONIVEL</code>: nada é gravado.</div></div>
+      </div>
+      <div class="uc">
+        <div class="uc-head"><span class="uc-id">UC12</span><h3>Reenviar sem duplicar</h3><span class="uc-route">POST /api/deliveries</span></div>
+        <div class="uc-body"><div class="uc-label">Pré-condição</div><div class="uc-value">Envio anterior sem resposta (conexão caiu).</div><div class="uc-label">Pós-condição</div><div class="uc-value">Nenhuma entrega duplicada.</div><div class="uc-label">Fluxo principal</div><div class="uc-value"><ol><li>Web reenvia com a mesma chave.</li><li>Sistema encontra a entrega já gravada e devolve 200 com ela.</li></ol></div></div>
+      </div>
+    </div>
+    <div class="pkg" id="pkg-3">
+      <div class="pkg-head"><span class="pkg-num">PACOTE 03</span><h2>Histórico e devolução</h2><div class="pkg-actors"><span class="actor-chip" style="background:var(--a3)">ADMIN</span><span class="actor-chip" style="background:var(--a2)">ALMOXARIFE</span></div></div>
+      <div class="uc">
+        <div class="uc-head"><span class="uc-id">UC13</span><h3>Consultar histórico de entregas</h3><span class="uc-route">GET /api/deliveries</span></div>
+        <div class="uc-body"><div class="uc-label">Pré-condição</div><div class="uc-value">Usuário autenticado.</div><div class="uc-label">Pós-condição</div><div class="uc-value">Lista filtrada no escopo.</div><div class="uc-label">Fluxo principal</div><div class="uc-value"><ol><li>Usuário filtra por nome ou matrícula, colaborador, almoxarifado, situação e período.</li></ol></div></div>
+      </div>
+      <div class="uc">
+        <div class="uc-head"><span class="uc-id">UC14</span><h3>Ver comprovante e assinatura</h3><span class="uc-route">GET /api/deliveries/:id · /signature</span></div>
+        <div class="uc-body"><div class="uc-label">Pré-condição</div><div class="uc-value">Entrega no escopo.</div><div class="uc-label">Pós-condição</div><div class="uc-value">Comprovante com itens, CA, troca prevista, data e hash.</div><div class="uc-label">Fluxo principal</div><div class="uc-value"><ol><li>Usuário abre a entrega.</li><li>Sistema devolve o detalhe e a imagem da assinatura com cabeçalhos restritivos.</li></ol></div></div>
+      </div>
+      <div class="uc">
+        <div class="uc-head"><span class="uc-id">UC15</span><h3>Registrar devolução</h3><span class="uc-route">POST /api/deliveries/:id/returns</span></div>
+        <div class="uc-body"><div class="uc-label">Pré-condição</div><div class="uc-value">Item com quantidade pendente.</div><div class="uc-label">Pós-condição</div><div class="uc-value">Devolução registrada; em bom estado, o item volta ao estoque.</div><div class="uc-label">Fluxo principal</div><div class="uc-value"><ol><li>Usuário escolhe o item, a quantidade e a condição: bom, danificado ou descartado.</li><li>Em bom estado, o Sistema gera movimentação <code>DEVOLUCAO</code> e soma ao saldo.</li></ol></div><div class="uc-label">Exceção</div><div class="uc-value alt">Quantidade maior que a pendente → <code>DEVOLUCAO_EXCEDE_ENTREGUE</code>.</div></div>
+      </div>
+    </div>
+    <div class="pkg" id="pkg-4">
+      <div class="pkg-head"><span class="pkg-num">PACOTE 04</span><h2>Estoque</h2><div class="pkg-actors"><span class="actor-chip" style="background:var(--a3)">ADMIN</span><span class="actor-chip" style="background:var(--a2)">ALMOXARIFE</span></div></div>
+      <p class="pkg-note">O almoxarife opera só os almoxarifados vinculados ao seu usuário.</p>
+      <div class="uc">
+        <div class="uc-head"><span class="uc-id">UC16</span><h3>Consultar saldos</h3><span class="uc-route">GET /api/stock/items</span></div>
+        <div class="uc-body"><div class="uc-label">Pré-condição</div><div class="uc-value">Usuário autenticado.</div><div class="uc-label">Pós-condição</div><div class="uc-value">Saldos agrupados por equipamento, com alertas.</div><div class="uc-label">Fluxo principal</div><div class="uc-value"><ol><li>Usuário escolhe o almoxarifado e busca por EPI, código ou local.</li><li>Pode filtrar só disponíveis ou abaixo do mínimo, por modelo e tamanho, ou ver "Por local".</li></ol></div></div>
+      </div>
+      <div class="uc">
+        <div class="uc-head"><span class="uc-id">UC17</span><h3>Dar entrada de material</h3><span class="uc-route">POST /api/stock/entries</span></div>
+        <div class="uc-body"><div class="uc-label">Pré-condição</div><div class="uc-value">Almoxarifado no escopo.</div><div class="uc-label">Pós-condição</div><div class="uc-value">Saldo somado com movimentação <code>ENTRADA</code>.</div><div class="uc-label">Fluxo principal</div><div class="uc-value"><ol><li>Usuário informa EPI, tamanho, lote, quantidade, motivo e, se quiser, o local.</li><li>Sistema cria a variação se for nova e soma o saldo.</li></ol></div></div>
+      </div>
+      <div class="uc">
+        <div class="uc-head"><span class="uc-id">UC18</span><h3>Registrar saída, perda ou avaria</h3><span class="uc-route">POST /api/stock/adjustments</span></div>
+        <div class="uc-body"><div class="uc-label">Pré-condição</div><div class="uc-value">Item no escopo.</div><div class="uc-label">Pós-condição</div><div class="uc-value">Saldo reduzido com a movimentação do tipo escolhido.</div><div class="uc-label">Fluxo principal</div><div class="uc-value"><ol><li>Usuário informa o tipo, a quantidade retirada e o motivo.</li></ol></div><div class="uc-label">Exceção</div><div class="uc-value alt">Retirar mais que o saldo → <code>ESTOQUE_INSUFICIENTE</code>.</div></div>
+      </div>
+      <div class="uc">
+        <div class="uc-head"><span class="uc-id">UC19</span><h3>Ajustar por inventário</h3><span class="uc-route">POST /api/stock/adjustments</span></div>
+        <div class="uc-body"><div class="uc-label">Pré-condição</div><div class="uc-value">Item no escopo.</div><div class="uc-label">Pós-condição</div><div class="uc-value">Saldo igual ao contado, com movimentação <code>AJUSTE</code>.</div><div class="uc-label">Fluxo principal</div><div class="uc-value"><ol><li>Usuário informa o saldo contado.</li><li>Sistema calcula a diferença e grava.</li></ol></div><div class="uc-label">Exceção</div><div class="uc-value alt">Saldo contado igual ao atual → <code>VALIDACAO</code>.</div></div>
+      </div>
+      <div class="uc">
+        <div class="uc-head"><span class="uc-id">UC20</span><h3>Definir local de armazenamento</h3><span class="uc-route">PATCH /api/stock/items/:id/location</span></div>
+        <div class="uc-body"><div class="uc-label">Pré-condição</div><div class="uc-value">Item no escopo.</div><div class="uc-label">Pós-condição</div><div class="uc-value">Local atualizado e auditado, saldo intacto.</div><div class="uc-label">Fluxo principal</div><div class="uc-value"><ol><li>Usuário escolhe um local sugerido ou digita um novo (até 60 caracteres); vazio remove.</li></ol></div></div>
+      </div>
+      <div class="uc">
+        <div class="uc-head"><span class="uc-id">UC21</span><h3>Consultar movimentações</h3><span class="uc-route">GET /api/stock/movements</span></div>
+        <div class="uc-body"><div class="uc-label">Pré-condição</div><div class="uc-value">Usuário autenticado.</div><div class="uc-label">Pós-condição</div><div class="uc-value">Histórico com delta e saldos antes e depois.</div><div class="uc-label">Fluxo principal</div><div class="uc-value"><ol><li>Usuário filtra por almoxarifado, EPI, variação, tipo e período.</li></ol></div></div>
+      </div>
+      <div class="uc">
+        <div class="uc-head"><span class="uc-id">UC22</span><h3>Listar locais em uso</h3><span class="uc-route">GET /api/stock/locations</span></div>
+        <div class="uc-body"><div class="uc-label">Pré-condição</div><div class="uc-value">Almoxarifado informado.</div><div class="uc-label">Pós-condição</div><div class="uc-value">Lista ordenada para sugestão e filtro.</div><div class="uc-label">Fluxo principal</div><div class="uc-value"><ol><li>Web pede os locais ao abrir a edição de local ou o filtro.</li></ol></div></div>
+      </div>
+    </div>
+    <div class="pkg" id="pkg-5">
+      <div class="pkg-head"><span class="pkg-num">PACOTE 05</span><h2>EPIs e CAs</h2><div class="pkg-actors"><span class="actor-chip" style="background:var(--a3)">ADMIN</span><span class="actor-chip" style="background:var(--a2)">ALMOXARIFE</span></div></div>
+      <p class="pkg-note">Ambos os perfis mantêm o catálogo. Sem CA vigente, o EPI não pode ser entregue.</p>
+      <div class="uc">
+        <div class="uc-head"><span class="uc-id">UC23</span><h3>Cadastrar e editar EPI</h3><span class="uc-route">POST · PATCH /api/epis</span></div>
+        <div class="uc-body"><div class="uc-label">Pré-condição</div><div class="uc-value">Usuário autenticado.</div><div class="uc-label">Pós-condição</div><div class="uc-value">EPI no catálogo.</div><div class="uc-label">Fluxo principal</div><div class="uc-value"><ol><li>Usuário informa nome, código interno (único e imutável), categoria, fabricante, modelo, estoque mínimo, preço e vida útil em dias.</li></ol></div></div>
+      </div>
+      <div class="uc">
+        <div class="uc-head"><span class="uc-id">UC24</span><h3>Criar categoria</h3><span class="uc-route">POST /api/epi-categories</span></div>
+        <div class="uc-body"><div class="uc-label">Pré-condição</div><div class="uc-value">Usuário autenticado.</div><div class="uc-label">Pós-condição</div><div class="uc-value">Categoria disponível.</div><div class="uc-label">Fluxo principal</div><div class="uc-value"><ol><li>Usuário informa o nome.</li></ol></div></div>
+      </div>
+      <div class="uc">
+        <div class="uc-head"><span class="uc-id">UC25</span><h3>Registrar Certificado de Aprovação</h3><span class="uc-route">POST /api/epis/:id/cas</span></div>
+        <div class="uc-body"><div class="uc-label">Pré-condição</div><div class="uc-value">EPI existe.</div><div class="uc-label">Pós-condição</div><div class="uc-value">CA vigente até a data de validade.</div><div class="uc-label">Fluxo principal</div><div class="uc-value"><ol><li>Usuário informa número, emissão e validade.</li></ol></div><div class="uc-label">Exceção</div><div class="uc-value alt">Validade anterior à emissão → <code>VALIDACAO</code>.</div></div>
+      </div>
+      <div class="uc">
+        <div class="uc-head"><span class="uc-id">UC26</span><h3>Cancelar CA</h3><span class="uc-route">POST /api/epis/:id/cas/:caId/cancel</span></div>
+        <div class="uc-body"><div class="uc-label">Pré-condição</div><div class="uc-value">CA existe.</div><div class="uc-label">Pós-condição</div><div class="uc-value">CA cancelado e auditado; sem outro vigente, o EPI deixa de ser entregável.</div><div class="uc-label">Fluxo principal</div><div class="uc-value"><ol><li>Usuário cancela o certificado.</li></ol></div></div>
+      </div>
+    </div>
+    <div class="pkg" id="pkg-6">
+      <div class="pkg-head"><span class="pkg-num">PACOTE 06</span><h2>Colaboradores</h2><div class="pkg-actors"><span class="actor-chip" style="background:var(--a3)">ADMIN</span><span class="actor-chip" style="background:var(--a2)">ALMOXARIFE</span></div></div>
+      <p class="pkg-note">Busca para os dois perfis; cadastro, situação e crachá só para o Administrador.</p>
+      <div class="uc">
+        <div class="uc-head"><span class="uc-id">UC27</span><h3>Consultar colaboradores</h3><span class="uc-route">GET /api/employees · /:id</span></div>
+        <div class="uc-body"><div class="uc-label">Pré-condição</div><div class="uc-value">Usuário autenticado.</div><div class="uc-label">Pós-condição</div><div class="uc-value">Lista e ficha no escopo; CPF mascarado para o almoxarife.</div><div class="uc-label">Fluxo principal</div><div class="uc-value"><ol><li>Usuário busca por nome ou matrícula e filtra por unidade, setor e situação.</li></ol></div></div>
+      </div>
+      <div class="uc">
+        <div class="uc-head"><span class="uc-id">UC28</span><h3>Cadastrar colaborador</h3><span class="uc-route">POST /api/employees</span></div>
+        <div class="uc-body"><div class="uc-label">Pré-condição</div><div class="uc-value">Administrador.</div><div class="uc-label">Pós-condição</div><div class="uc-value">Colaborador <code>ATIVO</code>.</div><div class="uc-label">Fluxo principal</div><div class="uc-value"><ol><li>Administrador informa matrícula, CPF (validado), nome, unidade, setor, cargo e dados opcionais.</li></ol></div><div class="uc-label">Exceção</div><div class="uc-value alt">CPF ou matrícula repetidos → <code>CONFLITO</code>.</div></div>
+      </div>
+      <div class="uc">
+        <div class="uc-head"><span class="uc-id">UC29</span><h3>Editar colaborador</h3><span class="uc-route">PATCH /api/employees/:id</span></div>
+        <div class="uc-body"><div class="uc-label">Pré-condição</div><div class="uc-value">Administrador.</div><div class="uc-label">Pós-condição</div><div class="uc-value">Dados atualizados (matrícula, CPF e unidade não mudam).</div><div class="uc-label">Fluxo principal</div><div class="uc-value"><ol><li>Administrador altera os dados permitidos.</li></ol></div></div>
+      </div>
+      <div class="uc">
+        <div class="uc-head"><span class="uc-id">UC30</span><h3>Alterar situação</h3><span class="uc-route">PATCH /api/employees/:id/status</span></div>
+        <div class="uc-body"><div class="uc-label">Pré-condição</div><div class="uc-value">Administrador.</div><div class="uc-label">Pós-condição</div><div class="uc-value">Colaborador ativo, inativo, bloqueado ou desligado.</div><div class="uc-label">Fluxo principal</div><div class="uc-value"><ol><li>Administrador escolhe a nova situação; desligamento exige data.</li></ol></div><div class="uc-label">Exceção</div><div class="uc-value alt">Transição fora das permitidas → <code>TRANSICAO_INVALIDA</code>.</div></div>
+      </div>
+      <div class="uc">
+        <div class="uc-head"><span class="uc-id">UC31</span><h3>Reemitir crachá</h3><span class="uc-route">POST /api/employees/:id/badge</span></div>
+        <div class="uc-body"><div class="uc-label">Pré-condição</div><div class="uc-value">Administrador.</div><div class="uc-label">Pós-condição</div><div class="uc-value">Novo código; o anterior para de funcionar.</div><div class="uc-label">Fluxo principal</div><div class="uc-value"><ol><li>Administrador reemite e imprime o novo QR.</li></ol></div></div>
+      </div>
+    </div>
+    <div class="pkg" id="pkg-7">
+      <div class="pkg-head"><span class="pkg-num">PACOTE 07</span><h2>Organização</h2><div class="pkg-actors"><span class="actor-chip" style="background:var(--a3)">ADMIN</span></div></div>
+      <p class="pkg-note">Cadastros de base, exclusivos do Administrador.</p>
+      <div class="uc">
+        <div class="uc-head"><span class="uc-id">UC32</span><h3>Manter empresas</h3><span class="uc-route">/api/companies</span></div>
+        <div class="uc-body"><div class="uc-label">Pré-condição</div><div class="uc-value">Administrador.</div><div class="uc-label">Pós-condição</div><div class="uc-value">Empresa cadastrada (CNPJ imutável).</div><div class="uc-label">Fluxo principal</div><div class="uc-value"><ol><li>Administrador cadastra ou edita razão social, nome fantasia e responsável.</li></ol></div></div>
+      </div>
+      <div class="uc">
+        <div class="uc-head"><span class="uc-id">UC33</span><h3>Manter unidades</h3><span class="uc-route">/api/business-units</span></div>
+        <div class="uc-body"><div class="uc-label">Pré-condição</div><div class="uc-value">Administrador.</div><div class="uc-label">Pós-condição</div><div class="uc-value">Unidade com código único na empresa.</div><div class="uc-label">Fluxo principal</div><div class="uc-value"><ol><li>Administrador cadastra ou edita a unidade e o endereço.</li></ol></div></div>
+      </div>
+      <div class="uc">
+        <div class="uc-head"><span class="uc-id">UC34</span><h3>Manter setores</h3><span class="uc-route">/api/departments</span></div>
+        <div class="uc-body"><div class="uc-label">Pré-condição</div><div class="uc-value">Administrador.</div><div class="uc-label">Pós-condição</div><div class="uc-value">Setor na hierarquia da unidade.</div><div class="uc-label">Fluxo principal</div><div class="uc-value"><ol><li>Administrador cadastra o setor e, se houver, o setor pai.</li></ol></div><div class="uc-label">Exceção</div><div class="uc-value alt">Hierarquia que formaria um ciclo → recusada.</div></div>
+      </div>
+      <div class="uc">
+        <div class="uc-head"><span class="uc-id">UC35</span><h3>Manter cargos</h3><span class="uc-route">/api/job-roles</span></div>
+        <div class="uc-body"><div class="uc-label">Pré-condição</div><div class="uc-value">Administrador.</div><div class="uc-label">Pós-condição</div><div class="uc-value">Cargo disponível no cadastro de colaboradores.</div><div class="uc-label">Fluxo principal</div><div class="uc-value"><ol><li>Administrador informa nome (único) e descrição.</li></ol></div></div>
+      </div>
+      <div class="uc">
+        <div class="uc-head"><span class="uc-id">UC36</span><h3>Manter almoxarifados</h3><span class="uc-route">POST · PATCH /api/warehouses</span></div>
+        <div class="uc-body"><div class="uc-label">Pré-condição</div><div class="uc-value">Administrador.</div><div class="uc-label">Pós-condição</div><div class="uc-value">Almoxarifado na unidade (código único por unidade).</div><div class="uc-label">Fluxo principal</div><div class="uc-value"><ol><li>Administrador cria ou renomeia o almoxarifado.</li></ol></div></div>
+      </div>
+    </div>
+    <div class="pkg" id="pkg-8">
+      <div class="pkg-head"><span class="pkg-num">PACOTE 08</span><h2>Usuários</h2><div class="pkg-actors"><span class="actor-chip" style="background:var(--a3)">ADMIN</span></div></div>
+      <p class="pkg-note">Exclusivo do Administrador.</p>
+      <div class="uc">
+        <div class="uc-head"><span class="uc-id">UC37</span><h3>Consultar usuários</h3><span class="uc-route">GET /api/users</span></div>
+        <div class="uc-body"><div class="uc-label">Pré-condição</div><div class="uc-value">Administrador.</div><div class="uc-label">Pós-condição</div><div class="uc-value">Lista com perfil, situação, bloqueio e último acesso.</div><div class="uc-label">Fluxo principal</div><div class="uc-value"><ol><li>Administrador navega pela lista paginada.</li></ol></div></div>
+      </div>
+      <div class="uc">
+        <div class="uc-head"><span class="uc-id">UC38</span><h3>Criar usuário</h3><span class="uc-route">POST /api/users</span></div>
+        <div class="uc-body"><div class="uc-label">Pré-condição</div><div class="uc-value">Administrador.</div><div class="uc-label">Pós-condição</div><div class="uc-value">Usuário com senha provisória.</div><div class="uc-label">Fluxo principal</div><div class="uc-value"><ol><li>Administrador informa nome, e-mail, perfil, senha inicial e almoxarifados.</li></ol></div><div class="uc-label">Exceção</div><div class="uc-value alt">E-mail repetido → <code>CONFLITO</code>.</div></div>
+      </div>
+      <div class="uc">
+        <div class="uc-head"><span class="uc-id">UC39</span><h3>Editar perfil, situação ou almoxarifados</h3><span class="uc-route">PATCH /api/users/:id</span></div>
+        <div class="uc-body"><div class="uc-label">Pré-condição</div><div class="uc-value">Administrador.</div><div class="uc-label">Pós-condição</div><div class="uc-value">Alteração aplicada e sessões do usuário revogadas.</div><div class="uc-label">Fluxo principal</div><div class="uc-value"><ol><li>Administrador altera os dados.</li><li>Sistema incrementa o <code>tokenVersion</code>: o usuário precisa entrar de novo.</li></ol></div></div>
+      </div>
+      <div class="uc">
+        <div class="uc-head"><span class="uc-id">UC40</span><h3>Redefinir senha</h3><span class="uc-route">POST /api/users/:id/reset-password</span></div>
+        <div class="uc-body"><div class="uc-label">Pré-condição</div><div class="uc-value">Administrador.</div><div class="uc-label">Pós-condição</div><div class="uc-value">Senha provisória, sessões revogadas e bloqueio zerado.</div><div class="uc-label">Fluxo principal</div><div class="uc-value"><ol><li>Administrador define a senha provisória e a repassa ao usuário.</li></ol></div></div>
+      </div>
+    </div>
+    <div class="pkg" id="pkg-9">
+      <div class="pkg-head"><span class="pkg-num">PACOTE 09</span><h2>Painel</h2><div class="pkg-actors"><span class="actor-chip" style="background:var(--a3)">ADMIN</span><span class="actor-chip" style="background:var(--a2)">ALMOXARIFE</span></div></div>
+      <div class="uc">
+        <div class="uc-head"><span class="uc-id">UC41</span><h3>Acompanhar o dia</h3><span class="uc-route">GET /api/dashboard/summary</span></div>
+        <div class="uc-body"><div class="uc-label">Pré-condição</div><div class="uc-value">Usuário autenticado.</div><div class="uc-label">Pós-condição</div><div class="uc-value">Resumo no escopo do usuário.</div><div class="uc-label">Fluxo principal</div><div class="uc-value"><ol><li>Usuário abre o início.</li><li>Sistema devolve entregas e colaboradores atendidos hoje, itens abaixo do mínimo, itens sem local, os últimos 7 dias e as 5 entregas mais recentes.</li><li>No celular aparecem atalhos de campo; no desktop, o painel completo.</li></ol></div></div>
+      </div>
+    </div>
+    <div class="pkg" id="pkg-10">
+      <div class="pkg-head"><span class="pkg-num">PACOTE 10</span><h2>Processos automáticos</h2><div class="pkg-actors"><span class="actor-chip" style="background:var(--a4)">SISTEMA</span></div></div>
+      <p class="pkg-note">Garantias executadas pelo próprio sistema, sem ação direta do usuário.</p>
+      <div class="uc">
+        <div class="uc-head"><span class="uc-id">UC42</span><h3>Baixar saldo sem corrida</h3><span class="uc-route">transação de POST /api/deliveries</span></div>
+        <div class="uc-body"><div class="uc-label">Pré-condição</div><div class="uc-value">Entrega válida.</div><div class="uc-label">Pós-condição</div><div class="uc-value">Saldo nunca negativo, mesmo com entregas simultâneas.</div><div class="uc-label">Fluxo principal</div><div class="uc-value"><ol><li>Sistema executa o <code>UPDATE</code> condicional item a item.</li><li>Se algum item não tiver saldo, desfaz a transação inteira.</li></ol></div></div>
+      </div>
+      <div class="uc">
+        <div class="uc-head"><span class="uc-id">UC43</span><h3>Auditar na mesma transação</h3><span class="uc-route">todas as escritas</span></div>
+        <div class="uc-body"><div class="uc-label">Pré-condição</div><div class="uc-value">Operação de escrita ou evento de sessão.</div><div class="uc-label">Pós-condição</div><div class="uc-value">Registro em <code>audit_logs</code> com antes e depois, IP e user-agent.</div><div class="uc-label">Fluxo principal</div><div class="uc-value"><ol><li>Sistema grava a auditoria dentro da transação da própria operação.</li></ol></div></div>
+      </div>
+      <div class="uc">
+        <div class="uc-head"><span class="uc-id">UC44</span><h3>Calcular troca prevista</h3><span class="uc-route">POST /api/deliveries</span></div>
+        <div class="uc-body"><div class="uc-label">Pré-condição</div><div class="uc-value">EPI com vida útil informada.</div><div class="uc-label">Pós-condição</div><div class="uc-value">Cada item entregue com data prevista de substituição.</div><div class="uc-label">Fluxo principal</div><div class="uc-value"><ol><li>Sistema soma a vida útil à data da entrega.</li></ol></div></div>
+      </div>
+      <div class="uc">
+        <div class="uc-head"><span class="uc-id">UC45</span><h3>Bloquear conta por tentativas</h3><span class="uc-route">POST /api/auth/login</span></div>
+        <div class="uc-body"><div class="uc-label">Pré-condição</div><div class="uc-value">5 senhas erradas seguidas.</div><div class="uc-label">Pós-condição</div><div class="uc-value">Conta bloqueada por 15 minutos, com auditoria.</div><div class="uc-label">Fluxo principal</div><div class="uc-value"><ol><li>Sistema conta as falhas no banco e bloqueia a conta.</li></ol></div></div>
+      </div>
+      <div class="uc">
+        <div class="uc-head"><span class="uc-id">UC46</span><h3>Revogar sessões em reuso de token</h3><span class="uc-route">POST /api/auth/refresh</span></div>
+        <div class="uc-body"><div class="uc-label">Pré-condição</div><div class="uc-value">Refresh já usado reapresentado fora da janela de 30 s.</div><div class="uc-label">Pós-condição</div><div class="uc-value">Todas as sessões do usuário revogadas, com auditoria.</div><div class="uc-label">Fluxo principal</div><div class="uc-value"><ol><li>Sistema detecta o reuso, sinal de token roubado.</li><li>Revoga todos os refresh tokens do usuário.</li></ol></div></div>
+      </div>
+    </div>
+
+  </main>
+</div>
+<script type="module">
+  import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@10.9.1/dist/mermaid.esm.min.mjs";
+  const dark = window.matchMedia("(prefers-color-scheme: dark)").matches;
+  mermaid.initialize({ startOnLoad: true, theme: dark ? "dark" : "neutral", fontFamily: "IBM Plex Mono, monospace" });
+</script>
+</body>
+</html>
